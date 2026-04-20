@@ -1,19 +1,361 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
     tools:context=".MainActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <LinearLayout
+        android:id="@+id/homeScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingLeft="24dp"
+        android:paddingTop="40dp"
+        android:paddingRight="24dp"
+        android:paddingBottom="32dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_glass_hero"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="26dp">
+
+            <TextView
+                android:id="@+id/homeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:text="@string/home_title"
+                android:textColor="@color/ink_primary"
+                android:textSize="34sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/startScanButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:background="@drawable/bg_glass_button"
+                android:elevation="2dp"
+                android:fontFamily="sans-serif-black"
+                android:paddingLeft="24dp"
+                android:paddingTop="8dp"
+                android:paddingRight="24dp"
+                android:paddingBottom="8dp"
+                android:text="@string/start_scan"
+                android:textAllCaps="false"
+                android:textColor="@color/button_text"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/homeDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"
+                android:lineSpacingExtra="3dp"
+                android:text="@string/home_description"
+                android:textColor="@color/ink_secondary"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/scanScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingLeft="24dp"
+            android:paddingTop="36dp"
+            android:paddingRight="24dp"
+            android:paddingBottom="18dp">
+
+            <TextView
+                android:id="@+id/scanTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:text="@string/scan_progress_label"
+                android:textColor="@color/ink_primary"
+                android:textSize="28sp" />
+
+            <TextView
+                android:id="@+id/currentScanLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:background="@drawable/bg_glass_panel"
+                android:gravity="center"
+                android:padding="14dp"
+                android:textColor="@color/ink_primary"
+                android:textSize="16sp"
+                tools:text="Currently scanning: installed apps and package sources" />
+
+            <TextView
+                android:id="@+id/scanSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:lineSpacingExtra="3dp"
+                android:text="@string/scan_description"
+                android:textColor="@color/ink_secondary"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/scanningPanel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2"
+            android:background="@drawable/bg_scan_panel"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingLeft="24dp"
+            android:paddingTop="32dp"
+            android:paddingRight="24dp"
+            android:paddingBottom="42dp">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/circularProgress"
+                android:layout_width="124dp"
+                android:layout_height="124dp"
+                android:indeterminate="true"
+                app:indicatorColor="@color/liquid_blue"
+                app:indicatorSize="124dp"
+                app:trackColor="@color/glass_track"
+                app:trackThickness="10dp" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/linearProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                app:indicatorColor="@color/liquid_blue"
+                app:trackColor="@color/glass_track" />
+
+            <TextView
+                android:id="@+id/scanCounter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:textColor="@color/ink_primary"
+                android:textSize="17sp"
+                tools:text="2 / 5 checks complete" />
+
+            <TextView
+                android:id="@+id/scanFootnote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:textColor="@color/ink_secondary"
+                android:textSize="14sp"
+                tools:text="No ads. No signup. Scanning locally on-device." />
+        </LinearLayout>
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/summaryScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/summaryContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingLeft="24dp"
+            android:paddingTop="42dp"
+            android:paddingRight="24dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:id="@+id/summaryTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:textColor="@color/summary_text"
+                android:textSize="32sp"
+                tools:text="Threat indicators detected" />
+
+            <TextView
+                android:id="@+id/summaryBody"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:lineSpacingExtra="3dp"
+                android:textColor="@color/summary_text"
+                android:textSize="16sp"
+                tools:text="Potential malware or serious security abuse was detected." />
+
+            <LinearLayout
+                android:id="@+id/summaryFindingsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:orientation="vertical" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/viewReportButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:background="@drawable/bg_glass_button"
+                android:elevation="2dp"
+                android:fontFamily="sans-serif-black"
+                android:text="@string/view_report"
+                android:textAllCaps="false"
+                android:textColor="@color/button_text"
+                android:textSize="18sp" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/reportScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_app_gradient"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="20dp"
+            android:paddingTop="28dp"
+            android:paddingRight="20dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:id="@+id/reportTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:text="@string/report_title"
+                android:textColor="@color/ink_primary"
+                android:textSize="30sp" />
+
+            <TextView
+                android:id="@+id/reportSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:lineSpacingExtra="3dp"
+                android:text="@string/report_subtitle"
+                android:textColor="@color/ink_secondary"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/reportSectionsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:orientation="vertical" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reportPrimaryButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="30dp"
+                android:background="@drawable/bg_glass_button"
+                android:elevation="2dp"
+                android:fontFamily="sans-serif-black"
+                android:textAllCaps="false"
+                android:textColor="@color/button_text"
+                android:textSize="18sp"
+                tools:text="Remove Malware" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/removalScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_app_gradient"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="20dp"
+            android:paddingTop="28dp"
+            android:paddingRight="20dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:text="@string/removal_page_title"
+                android:textColor="@color/ink_primary"
+                android:textSize="30sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/removal_page_subtitle"
+                android:textColor="@color/ink_secondary"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/removalThreatsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="vertical" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/removeSelectedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="26dp"
+                android:background="@drawable/bg_glass_button"
+                android:elevation="2dp"
+                android:fontFamily="sans-serif-black"
+                android:text="@string/remove_selected"
+                android:textAllCaps="false"
+                android:textColor="@color/button_text"
+                android:textSize="18sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/removalBackButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="14dp"
+                android:text="@string/back_to_report"
+                android:textAllCaps="false"
+                android:textColor="@color/ink_primary" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</FrameLayout>

@@ -2,4 +2,20 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="liquid_top">#EAF4FF</color>
+    <color name="liquid_mid">#DDEFFF</color>
+    <color name="liquid_bottom">#C7DEFF</color>
+    <color name="liquid_blue">#6FB8FF</color>
+    <color name="liquid_pink">#F5C6FF</color>
+    <color name="ink_primary">#10213D</color>
+    <color name="ink_secondary">#50627F</color>
+    <color name="summary_text">#F9FCFF</color>
+    <color name="button_text">#28599C</color>
+    <color name="glass_fill">#88FFFFFF</color>
+    <color name="glass_fill_strong">#E8FFFFFF</color>
+    <color name="glass_fill_soft">#80FFFFFF</color>
+    <color name="glass_stroke">#B3FFFFFF</color>
+    <color name="glass_track">#52FFFFFF</color>
+    <color name="status_safe">#A9F0C6</color>
+    <color name="status_danger">#FFD3DA</color>
 </resources>
