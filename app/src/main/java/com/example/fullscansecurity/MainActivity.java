@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.AppOpsManager;
 import android.app.KeyguardManager;
 import android.app.admin.DevicePolicyManager;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -12,6 +13,10 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.ProxyInfo;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -20,10 +25,13 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.provider.Telephony;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -39,6 +47,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -51,10 +60,13 @@ import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.io.File;
+import java.lang.reflect.Method;
+import java.security.KeyStore;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -65,6 +77,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "FullScanSecurity";
+
+    private static final int TOTAL_SCAN_STEPS = 13;
 
     private static final List<String> HIGH_RISK_PERMISSIONS = Arrays.asList(
             Manifest.permission.READ_SMS,
@@ -87,9 +103,39 @@ public class MainActivity extends AppCompatActivity {
             "hack", "mod", "cracker", "rat", "miner", "dropper", "loader"
     );
 
+    private static final List<String> ROOT_PACKAGES = Arrays.asList(
+            "com.topjohnwu.magisk",
+            "eu.chainfire.supersu",
+            "com.koushikdutta.superuser",
+            "com.thirdparty.superuser",
+            "com.kingroot.kinguser"
+    );
+
+    private static final List<String> ROOT_PATHS = Arrays.asList(
+            "/system/bin/su",
+            "/system/xbin/su",
+            "/sbin/su",
+            "/system/bin/.ext/su",
+            "/system/usr/we-need-root/su",
+            "/system/app/Superuser.apk",
+            "/cache/magisk.log",
+            "/data/adb/magisk"
+    );
+
+    private static final List<String> KNOWN_BROWSER_PACKAGES = Arrays.asList(
+            "com.android.chrome",
+            "org.mozilla.firefox",
+            "com.microsoft.emmx",
+            "com.brave.browser",
+            "com.opera.browser",
+            "com.sec.android.app.sbrowser",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser"
+    );
+
     private final ExecutorService scanExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final ArrayDeque<ThreatFinding> removalQueue = new ArrayDeque<>();
+    private final ArrayDeque<String> removalQueue = new ArrayDeque<>();
 
     private LinearLayout homeScreen;
     private LinearLayout scanScreen;
@@ -254,26 +300,58 @@ public class MainActivity extends AppCompatActivity {
 
     private List<ScanSection> runFullScan() {
         List<ScanSection> sections = new ArrayList<>();
-        int totalSteps = 5;
+        int totalSteps = TOTAL_SCAN_STEPS;
 
         updateScanProgress(1, totalSteps, getString(R.string.section_apps));
-        sections.add(scanInstalledApps());
+        sections.add(runSectionSafely(getString(R.string.section_apps), "App scan degraded.", this::scanInstalledApps));
         SystemClock.sleep(320);
 
         updateScanProgress(2, totalSteps, getString(R.string.section_permissions));
-        sections.add(scanPermissionExposure());
+        sections.add(runSectionSafely(getString(R.string.section_permissions), "Permission scan degraded.", this::scanPermissionExposure));
         SystemClock.sleep(320);
 
         updateScanProgress(3, totalSteps, getString(R.string.section_accessibility));
-        sections.add(scanAccessibilityAndAdminAbuse());
+        sections.add(runSectionSafely(getString(R.string.section_accessibility), "Accessibility scan degraded.", this::scanAccessibilityAndAdminAbuse));
         SystemClock.sleep(320);
 
-        updateScanProgress(4, totalSteps, getString(R.string.section_device));
-        sections.add(scanDeviceSecurityPosture());
+        updateScanProgress(4, totalSteps, "Network / DNS / VPN");
+        sections.add(runSectionSafely("Network / DNS / VPN", "Network scan degraded.", this::scanNetworkSecurityPosture));
         SystemClock.sleep(320);
 
-        updateScanProgress(5, totalSteps, getString(R.string.section_storage));
-        sections.add(scanReachableStorageSurfaces());
+        updateScanProgress(5, totalSteps, "Install trust");
+        sections.add(runSectionSafely("Install trust", "Install trust scan degraded.", this::scanInstallTrust));
+        SystemClock.sleep(320);
+
+        updateScanProgress(6, totalSteps, "Boot / integrity");
+        sections.add(runSectionSafely("Boot / integrity", "Integrity scan degraded.", this::scanBootIntegrity));
+        SystemClock.sleep(320);
+
+        updateScanProgress(7, totalSteps, "Notification / overlay");
+        sections.add(runSectionSafely("Notification / overlay", "Persistence scan degraded.", this::scanNotificationAndOverlayAbuse));
+        SystemClock.sleep(320);
+
+        updateScanProgress(8, totalSteps, "Browser / SMS / call");
+        sections.add(runSectionSafely("Browser / SMS / call", "Default-app scan degraded.", this::scanDefaultAppRedirectionRisk));
+        SystemClock.sleep(320);
+
+        updateScanProgress(9, totalSteps, "Live posture");
+        sections.add(runSectionSafely("Live posture", "Live posture scan degraded.", this::scanLivePosture));
+        SystemClock.sleep(320);
+
+        updateScanProgress(10, totalSteps, "Input methods");
+        sections.add(runSectionSafely("Input methods", "Input-method scan degraded.", this::scanInputMethodRisk));
+        SystemClock.sleep(320);
+
+        updateScanProgress(11, totalSteps, "Surveillance risk");
+        sections.add(runSectionSafely("Surveillance risk", "Surveillance scan degraded.", this::scanSurveillanceRisk));
+        SystemClock.sleep(320);
+
+        updateScanProgress(12, totalSteps, getString(R.string.section_device));
+        sections.add(runSectionSafely(getString(R.string.section_device), "Device posture scan degraded.", this::scanDeviceSecurityPosture));
+        SystemClock.sleep(320);
+
+        updateScanProgress(13, totalSteps, getString(R.string.section_storage));
+        sections.add(runSectionSafely(getString(R.string.section_storage), "Storage scan degraded.", this::scanReachableStorageSurfaces));
         SystemClock.sleep(380);
 
         return sections;
@@ -469,6 +547,545 @@ public class MainActivity extends AppCompatActivity {
         return new ScanSection(getString(R.string.section_accessibility), summary, findings);
     }
 
+    private ScanSection scanNetworkSecurityPosture() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+
+        try {
+            String privateDnsMode = Settings.Global.getString(getContentResolver(), "private_dns_mode");
+            String privateDnsHost = Settings.Global.getString(getContentResolver(), "private_dns_specifier");
+            if (TextUtils.isEmpty(privateDnsMode) || "off".equalsIgnoreCase(privateDnsMode)) {
+                findings.add(new ThreatFinding(
+                        "Private DNS off",
+                        "DNS traffic is not hardened.",
+                        "DNS posture",
+                        "Network settings",
+                        "private_dns_mode=" + safeValue(privateDnsMode),
+                        "Use automatic or a trusted provider.",
+                        null,
+                        null,
+                        false,
+                        false
+                ));
+            } else if ("hostname".equalsIgnoreCase(privateDnsMode) && !TextUtils.isEmpty(privateDnsHost)
+                    && !isTrustedPrivateDnsHost(privateDnsHost)) {
+                findings.add(new ThreatFinding(
+                        "Custom Private DNS",
+                        "A custom DNS host is active.",
+                        "DNS posture",
+                        privateDnsHost,
+                        "Private DNS host is not in the trusted allowlist.",
+                        "Verify the resolver owner.",
+                        null,
+                        null,
+                        false,
+                        false
+                ));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Private DNS check failed", e);
+        }
+
+        try {
+            int userCaCount = getUserInstalledCaCount();
+            if (userCaCount > 0) {
+                findings.add(new ThreatFinding(
+                        "User CA certificates found",
+                        "User-added CA certs can intercept traffic.",
+                        "TLS trust surface",
+                        "System trust store",
+                        userCaCount + " user CA aliases detected.",
+                        "Review user-installed credentials in security settings.",
+                        null,
+                        null,
+                        false,
+                        false
+                ));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "User CA scan failed", e);
+        }
+
+        try {
+            ProxyInfo proxyInfo = getDefaultProxyInfo();
+            if (proxyInfo != null && !TextUtils.isEmpty(proxyInfo.getHost())) {
+                findings.add(new ThreatFinding(
+                        "Proxy profile active",
+                        "Traffic may be routed through a proxy.",
+                        "Proxy posture",
+                        proxyInfo.getHost() + ":" + proxyInfo.getPort(),
+                        "Default proxy is configured.",
+                        "Remove it if you did not set it.",
+                        null,
+                        null,
+                        false,
+                        false
+                ));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Proxy check failed", e);
+        }
+
+        try {
+            String alwaysOnVpnPackage = getAlwaysOnVpnPackage();
+            if (!TextUtils.isEmpty(alwaysOnVpnPackage) && !shouldSkipPackage(alwaysOnVpnPackage)) {
+                findings.add(buildPackageFinding(
+                        alwaysOnVpnPackage,
+                        packageManager,
+                        "Always-on VPN active",
+                        "VPN posture",
+                        "An always-on VPN is configured.",
+                        "Always-on VPN package: " + alwaysOnVpnPackage,
+                        "Review this VPN if you did not choose it.",
+                        true,
+                        true
+                ));
+            } else if (isVpnActive()) {
+                findings.add(new ThreatFinding(
+                        "VPN transport active",
+                        "A VPN is connected.",
+                        "VPN posture",
+                        "Active network",
+                        "NetworkCapabilities reports VPN transport.",
+                        "Verify the VPN provider.",
+                        null,
+                        null,
+                        false,
+                        false
+                ));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "VPN check failed", e);
+        }
+
+        return new ScanSection("Network / DNS / VPN", "Checked DNS, VPN, proxy and user trust store.", findings);
+    }
+
+    private ScanSection runSectionSafely(
+            @NonNull String title,
+            @NonNull String fallbackSummary,
+            @NonNull ScanSectionSupplier supplier
+    ) {
+        try {
+            return supplier.get();
+        } catch (Throwable throwable) {
+            Log.e(TAG, "Scan section failed: " + title, throwable);
+            List<ThreatFinding> findings = new ArrayList<>();
+            findings.add(new ThreatFinding(
+                    title + " unavailable",
+                    "This check could not finish on this device.",
+                    "Scan stability",
+                    title,
+                    throwable.getClass().getSimpleName(),
+                    "The app kept scanning the remaining sections.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+            return new ScanSection(title, fallbackSummary, findings);
+        }
+    }
+
+    private ScanSection scanInstallTrust() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        int reviewed = 0;
+
+        if (Settings.Global.getInt(getContentResolver(), "package_verifier_enable", 1) == 0) {
+            findings.add(new ThreatFinding(
+                    "Package verifier off",
+                    "Install verification is disabled.",
+                    "Install trust",
+                    "System settings",
+                    "PACKAGE_VERIFIER_ENABLE=0",
+                    "Turn install verification back on.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        if (Settings.Global.getInt(getContentResolver(), "verifier_verify_adb_installs", 1) == 0) {
+            findings.add(new ThreatFinding(
+                    "ADB verifier off",
+                    "ADB installs are not verified.",
+                    "Install trust",
+                    "System settings",
+                    "verifier_verify_adb_installs=0",
+                    "Re-enable ADB install verification.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        if (!isPackageInstalled("com.google.android.gms")) {
+            findings.add(new ThreatFinding(
+                    "Play services missing",
+                    "Play Protect state cannot be confirmed.",
+                    "Install trust",
+                    "Google services",
+                    "com.google.android.gms not found.",
+                    "Use another trust source if Play Protect is absent.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        for (ApplicationInfo appInfo : getInstalledApplicationsCompat()) {
+            if (!isScannableUserApp(appInfo)) {
+                continue;
+            }
+            reviewed++;
+            try {
+                PackageInfo packageInfo = getPackageInfoCompat(appInfo.packageName, PackageManager.GET_PERMISSIONS);
+                List<String> requested = getRequestedPermissions(packageInfo);
+                if (!requested.contains(Manifest.permission.REQUEST_INSTALL_PACKAGES)) {
+                    continue;
+                }
+                findings.add(new ThreatFinding(
+                        packageManager.getApplicationLabel(appInfo).toString(),
+                        "App can request unknown installs.",
+                        "Install trust",
+                        appInfo.packageName,
+                        "REQUEST_INSTALL_PACKAGES present.",
+                        "Remove it if you do not trust its install path.",
+                        appInfo.packageName,
+                        packageManager.getApplicationIcon(appInfo),
+                        true,
+                        true
+                ));
+            } catch (Exception ignored) {
+                // Ignore packages that cannot be fully resolved.
+            }
+        }
+
+        return new ScanSection("Install trust", reviewed + " apps checked for install trust signals.", findings);
+    }
+
+    private ScanSection scanBootIntegrity() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+
+        if (Build.TAGS != null && Build.TAGS.contains("test-keys")) {
+            findings.add(new ThreatFinding(
+                    "Test-keys build",
+                    "Firmware uses test-keys.",
+                    "Integrity",
+                    Build.FINGERPRINT,
+                    "Build.TAGS contains test-keys.",
+                    "Treat the device as lower trust.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        if (isProbablyEmulator()) {
+            findings.add(new ThreatFinding(
+                    "Emulator detected",
+                    "This device looks virtualized.",
+                    "Integrity",
+                    Build.MODEL,
+                    "Build fingerprint and hardware match emulator heuristics.",
+                    "Use a physical device for stronger assurance.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        if (hasRootBinary()) {
+            findings.add(new ThreatFinding(
+                    "Root binary found",
+                    "Root artifacts were detected.",
+                    "Integrity",
+                    "Filesystem",
+                    "Known su or Magisk paths exist.",
+                    "Review root tooling or firmware changes.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        String bootState = getSystemPropertyCompat("ro.boot.vbmeta.device_state");
+        String flashLocked = getSystemPropertyCompat("ro.boot.flash.locked");
+        String verifiedBoot = getSystemPropertyCompat("ro.boot.verifiedbootstate");
+        if ("unlocked".equalsIgnoreCase(bootState) || "0".equals(flashLocked)
+                || (!TextUtils.isEmpty(verifiedBoot) && !"green".equalsIgnoreCase(verifiedBoot))) {
+            findings.add(new ThreatFinding(
+                    "Boot integrity weakened",
+                    "Bootloader or verified boot looks weakened.",
+                    "Integrity",
+                    "Boot chain",
+                    "device_state=" + safeValue(bootState) + ", flash.locked=" + safeValue(flashLocked)
+                            + ", verifiedbootstate=" + safeValue(verifiedBoot),
+                    "Re-lock the boot chain if this is unexpected.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        for (String rootPackage : ROOT_PACKAGES) {
+            if (shouldSkipPackage(rootPackage) || !isPackageInstalled(rootPackage)) {
+                continue;
+            }
+            findings.add(buildPackageFinding(
+                    rootPackage,
+                    packageManager,
+                    "Root management app",
+                    "Integrity",
+                    "Known root management tooling is installed.",
+                    "Installed package matches a root app signature.",
+                    "Remove it if the device should stay stock.",
+                    true,
+                    true
+            ));
+        }
+
+        return new ScanSection("Boot / integrity", "Checked root, emulator and verified-boot indicators.", findings);
+    }
+
+    private ScanSection scanNotificationAndOverlayAbuse() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        Set<String> listeners = getEnabledNotificationListenerPackages();
+
+        for (ApplicationInfo appInfo : getInstalledApplicationsCompat()) {
+            if (!isScannableUserApp(appInfo)) {
+                continue;
+            }
+            try {
+                PackageInfo packageInfo = getPackageInfoCompat(
+                        appInfo.packageName,
+                        PackageManager.GET_PERMISSIONS | PackageManager.GET_RECEIVERS
+                );
+                List<String> requested = getRequestedPermissions(packageInfo);
+                boolean notificationListener = listeners.contains(appInfo.packageName);
+                boolean overlay = requested.contains("android.permission.SYSTEM_ALERT_WINDOW");
+                boolean bootPersistence = hasBootPersistenceReceiver(packageInfo, requested);
+                boolean batteryBypass = isIgnoringBatteryOptimizations(appInfo.packageName);
+
+                if (!notificationListener && !overlay && !bootPersistence && !batteryBypass) {
+                    continue;
+                }
+
+                List<String> reasons = new ArrayList<>();
+                if (notificationListener) {
+                    reasons.add("Notification access");
+                }
+                if (overlay) {
+                    reasons.add("Overlay");
+                }
+                if (bootPersistence) {
+                    reasons.add("Boot start");
+                }
+                if (batteryBypass) {
+                    reasons.add("Battery bypass");
+                }
+
+                findings.add(new ThreatFinding(
+                        packageManager.getApplicationLabel(appInfo).toString(),
+                        "App holds persistence or interception privileges.",
+                        "Persistence",
+                        appInfo.packageName,
+                        TextUtils.join(", ", reasons),
+                        "Disable the risky capabilities if the app is not trusted.",
+                        appInfo.packageName,
+                        packageManager.getApplicationIcon(appInfo),
+                        true,
+                        true
+                ));
+            } catch (Exception ignored) {
+                // Ignore packages with unavailable manifest metadata.
+            }
+        }
+
+        return new ScanSection("Notification / overlay", "Checked listeners, overlays, boot start and battery bypass.", findings);
+    }
+
+    private ScanSection scanDefaultAppRedirectionRisk() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        Set<String> accessibilityPackages = getEnabledAccessibilityPackages();
+
+        findings.addAll(buildDefaultRoleFindings(packageManager, "Default SMS", getDefaultSmsPackage(), accessibilityPackages));
+        findings.addAll(buildDefaultRoleFindings(packageManager, "Default dialer", getDefaultDialerPackage(), accessibilityPackages));
+        findings.addAll(buildDefaultRoleFindings(packageManager, "Default browser", getDefaultBrowserPackage(), accessibilityPackages));
+
+        return new ScanSection("Browser / SMS / call", "Checked default communication and browsing handlers.", findings);
+    }
+
+    private ScanSection scanLivePosture() {
+        List<ThreatFinding> findings = new ArrayList<>();
+
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            findings.add(new ThreatFinding(
+                    "Alerts muted",
+                    "This app cannot post security alerts.",
+                    "Live posture",
+                    getPackageName(),
+                    "Notifications are disabled for the app.",
+                    "Enable notifications if you want ongoing warnings.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        if (!hasUsageStatsAccess()) {
+            findings.add(new ThreatFinding(
+                    "Usage access missing",
+                    "Live posture checks are reduced.",
+                    "Live posture",
+                    getPackageName(),
+                    "Usage stats access is not granted.",
+                    "Grant usage access for broader posture checks.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        if (!isIgnoringBatteryOptimizations(getPackageName())) {
+            findings.add(new ThreatFinding(
+                    "Background checks may sleep",
+                    "Battery optimization can delay live checks.",
+                    "Live posture",
+                    getPackageName(),
+                    "App is still battery optimized.",
+                    "Ignore optimization only if you want stronger background alerts.",
+                    null,
+                    null,
+                    false,
+                    false
+            ));
+        }
+
+        return new ScanSection("Live posture", "Checked whether live guard rails can keep warning you.", findings);
+    }
+
+    private ScanSection scanInputMethodRisk() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        Set<String> enabledInputMethods = getEnabledInputMethodPackages();
+        String defaultInputMethod = getDefaultInputMethodPackage();
+
+        for (String packageName : enabledInputMethods) {
+            if (TextUtils.isEmpty(packageName) || shouldSkipPackage(packageName)) {
+                continue;
+            }
+            try {
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+                if (!isScannableUserApp(appInfo)) {
+                    continue;
+                }
+                PackageInfo packageInfo = getPackageInfoCompat(packageName, PackageManager.GET_PERMISSIONS);
+                List<String> requested = getRequestedPermissions(packageInfo);
+                boolean defaultIme = packageName.equals(defaultInputMethod);
+                boolean internet = requested.contains(Manifest.permission.INTERNET);
+                boolean contacts = requested.contains(Manifest.permission.READ_CONTACTS);
+                boolean microphone = requested.contains(Manifest.permission.RECORD_AUDIO);
+                boolean overlay = requested.contains("android.permission.SYSTEM_ALERT_WINDOW");
+
+                List<String> reasons = new ArrayList<>();
+                if (defaultIme) {
+                    reasons.add("Default keyboard");
+                }
+                if (internet) {
+                    reasons.add("Network access");
+                }
+                if (contacts) {
+                    reasons.add("Contacts access");
+                }
+                if (microphone) {
+                    reasons.add("Microphone");
+                }
+                if (overlay) {
+                    reasons.add("Overlay");
+                }
+
+                if (defaultIme || contacts || microphone || overlay) {
+                    findings.add(new ThreatFinding(
+                            packageManager.getApplicationLabel(appInfo).toString(),
+                            "Keyboard app has elevated data access.",
+                            "Keylogger risk",
+                            packageName,
+                            TextUtils.join(", ", reasons),
+                            "Review or replace the keyboard if you do not trust it.",
+                            packageName,
+                            packageManager.getApplicationIcon(appInfo),
+                            true,
+                            true
+                    ));
+                }
+            } catch (Exception ignored) {
+                // Ignore IMEs that cannot be fully resolved.
+            }
+        }
+
+        return new ScanSection("Input methods", "Checked enabled keyboards and default input method.", findings);
+    }
+
+    private ScanSection scanSurveillanceRisk() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        int reviewed = 0;
+
+        for (ApplicationInfo appInfo : getInstalledApplicationsCompat()) {
+            if (!isScannableUserApp(appInfo)) {
+                continue;
+            }
+            reviewed++;
+            try {
+                PackageInfo packageInfo = getPackageInfoCompat(appInfo.packageName, PackageManager.GET_PERMISSIONS);
+                List<String> requested = getRequestedPermissions(packageInfo);
+                List<String> matched = new ArrayList<>();
+
+                maybeAddPermissionLabel(requested, Manifest.permission.RECORD_AUDIO, "Mic", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.CAMERA, "Camera", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.ACCESS_FINE_LOCATION, "Location", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.READ_CONTACTS, "Contacts", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.READ_SMS, "SMS", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.READ_CALL_LOG, "Call log", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.QUERY_ALL_PACKAGES, "All apps", matched);
+                maybeAddPermissionLabel(requested, "android.permission.SYSTEM_ALERT_WINDOW", "Overlay", matched);
+
+                if (matched.size() >= 4) {
+                    findings.add(new ThreatFinding(
+                            packageManager.getApplicationLabel(appInfo).toString(),
+                            "App has a stalkingware-like data profile.",
+                            "Surveillance risk",
+                            appInfo.packageName,
+                            TextUtils.join(", ", matched),
+                            "Review the app if it does not clearly need this access.",
+                            appInfo.packageName,
+                            packageManager.getApplicationIcon(appInfo),
+                            true,
+                            true
+                    ));
+                }
+            } catch (Exception ignored) {
+                // Ignore packages that fail metadata resolution.
+            }
+        }
+
+        return new ScanSection("Surveillance risk", reviewed + " apps checked for stalkingware-style access.", findings);
+    }
+
     private ScanSection scanDeviceSecurityPosture() {
         List<ThreatFinding> findings = new ArrayList<>();
 
@@ -651,7 +1268,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean isScannableUserApp(@NonNull ApplicationInfo appInfo) {
         boolean system = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
         boolean updatedSystem = (appInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
-        return (!system || updatedSystem) && !shouldSkipPackage(appInfo.packageName);
+        if (shouldSkipPackage(appInfo.packageName)) {
+            return false;
+        }
+        if (system || updatedSystem) {
+            return isBrowserPackage(appInfo.packageName);
+        }
+        return true;
     }
 
     private boolean shouldSkipPackage(@Nullable String packageName) {
@@ -706,6 +1329,327 @@ public class MainActivity extends AppCompatActivity {
             return "Google Play";
         }
         return installer;
+    }
+
+    private String safeValue(@Nullable String value) {
+        return TextUtils.isEmpty(value) ? "unknown" : value;
+    }
+
+    private boolean isTrustedPrivateDnsHost(@NonNull String host) {
+        String normalized = host.toLowerCase(Locale.US);
+        return normalized.contains("dns.google")
+                || normalized.contains("one.one.one.one")
+                || normalized.contains("cloudflare")
+                || normalized.contains("quad9")
+                || normalized.contains("nextdns");
+    }
+
+    private int getUserInstalledCaCount() {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("AndroidCAStore");
+            keyStore.load(null);
+            int count = 0;
+            Enumeration<String> aliases = keyStore.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                if (alias != null && alias.startsWith("user:")) {
+                    count++;
+                }
+            }
+            return count;
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    @Nullable
+    private ProxyInfo getDefaultProxyInfo() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) {
+            return null;
+        }
+        return connectivityManager.getDefaultProxy();
+    }
+
+    private boolean isVpnActive() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) {
+            return false;
+        }
+        Network network = connectivityManager.getActiveNetwork();
+        if (network == null) {
+            return false;
+        }
+        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+        return capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+    }
+
+    @Nullable
+    private String getAlwaysOnVpnPackage() {
+        return Settings.Secure.getString(getContentResolver(), "always_on_vpn_app");
+    }
+
+    private boolean isPackageInstalled(@NonNull String packageName) {
+        try {
+            getPackageManager().getPackageInfo(packageName, 0);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private boolean isBrowserPackage(@Nullable String packageName) {
+        if (TextUtils.isEmpty(packageName)) {
+            return false;
+        }
+        if (KNOWN_BROWSER_PACKAGES.contains(packageName)) {
+            return true;
+        }
+        String defaultBrowser = getDefaultBrowserPackage();
+        if (packageName.equals(defaultBrowser)) {
+            return true;
+        }
+        String lower = packageName.toLowerCase(Locale.US);
+        return lower.contains("browser") || lower.contains("chrome") || lower.contains("firefox");
+    }
+
+    private boolean hasRootBinary() {
+        for (String path : ROOT_PATHS) {
+            if (new File(path).exists()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isProbablyEmulator() {
+        return Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.toLowerCase(Locale.US).contains("emulator")
+                || Build.MODEL.toLowerCase(Locale.US).contains("sdk")
+                || Build.HARDWARE.toLowerCase(Locale.US).contains("ranchu")
+                || Build.HARDWARE.toLowerCase(Locale.US).contains("goldfish")
+                || Build.PRODUCT.toLowerCase(Locale.US).contains("sdk");
+    }
+
+    private String getSystemPropertyCompat(@NonNull String key) {
+        try {
+            Class<?> systemProperties = Class.forName("android.os.SystemProperties");
+            Method getMethod = systemProperties.getMethod("get", String.class, String.class);
+            Object value = getMethod.invoke(null, key, "");
+            return value instanceof String ? (String) value : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private Set<String> getEnabledNotificationListenerPackages() {
+        String enabled = Settings.Secure.getString(getContentResolver(),
+                "enabled_notification_listeners");
+        if (TextUtils.isEmpty(enabled)) {
+            return Collections.emptySet();
+        }
+        Set<String> packages = new LinkedHashSet<>();
+        TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');
+        splitter.setString(enabled);
+        while (splitter.hasNext()) {
+            ComponentName component = ComponentName.unflattenFromString(splitter.next());
+            if (component != null) {
+                packages.add(component.getPackageName());
+            }
+        }
+        return packages;
+    }
+
+    private boolean hasBootPersistenceReceiver(@NonNull PackageInfo packageInfo, @NonNull List<String> requestedPermissions) {
+        return requestedPermissions.contains(Manifest.permission.RECEIVE_BOOT_COMPLETED)
+                || (packageInfo.receivers != null && packageInfo.receivers.length > 0);
+    }
+
+    private boolean isIgnoringBatteryOptimizations(@NonNull String packageName) {
+        PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (powerManager == null) {
+            return false;
+        }
+        try {
+            return powerManager.isIgnoringBatteryOptimizations(packageName);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private Set<String> getEnabledInputMethodPackages() {
+        String enabled = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_INPUT_METHODS);
+        if (TextUtils.isEmpty(enabled)) {
+            return Collections.emptySet();
+        }
+        Set<String> packages = new LinkedHashSet<>();
+        TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');
+        splitter.setString(enabled);
+        while (splitter.hasNext()) {
+            ComponentName component = ComponentName.unflattenFromString(splitter.next());
+            if (component != null) {
+                packages.add(component.getPackageName());
+            }
+        }
+        return packages;
+    }
+
+    @Nullable
+    private String getDefaultInputMethodPackage() {
+        String value = Settings.Secure.getString(getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        if (TextUtils.isEmpty(value)) {
+            return null;
+        }
+        ComponentName component = ComponentName.unflattenFromString(value);
+        return component == null ? null : component.getPackageName();
+    }
+
+    private void maybeAddPermissionLabel(
+            @NonNull List<String> requested,
+            @NonNull String permission,
+            @NonNull String label,
+            @NonNull List<String> output
+    ) {
+        if (requested.contains(permission)) {
+            output.add(label);
+        }
+    }
+
+    private List<ThreatFinding> buildDefaultRoleFindings(
+            @NonNull PackageManager packageManager,
+            @NonNull String roleName,
+            @Nullable String packageName,
+            @NonNull Set<String> accessibilityPackages
+    ) {
+        if (TextUtils.isEmpty(packageName) || shouldSkipPackage(packageName)) {
+            return Collections.emptyList();
+        }
+
+        try {
+            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+            if (!isScannableUserApp(appInfo)) {
+                return Collections.emptyList();
+            }
+            PackageInfo packageInfo = getPackageInfoCompat(packageName, PackageManager.GET_PERMISSIONS);
+            List<String> requested = getRequestedPermissions(packageInfo);
+            String installer = getInstallerPackage(packageName);
+            int riskScore = countHighRiskPermissions(requested);
+            boolean accessibility = accessibilityPackages.contains(packageName);
+            boolean suspiciousInstaller = TextUtils.isEmpty(installer) || installer.toLowerCase(Locale.US).contains("unknown");
+            boolean messagingSensitive = requested.contains(Manifest.permission.SEND_SMS)
+                    || requested.contains(Manifest.permission.READ_SMS)
+                    || requested.contains(Manifest.permission.READ_CALL_LOG)
+                    || requested.contains(Manifest.permission.READ_CONTACTS);
+
+            if (!suspiciousInstaller && !accessibility && !messagingSensitive && riskScore < 3
+                    && !containsSuspiciousKeyword(packageName)) {
+                return Collections.emptyList();
+            }
+
+            List<String> reasons = new ArrayList<>();
+            if (suspiciousInstaller) {
+                reasons.add("Unknown installer");
+            }
+            if (accessibility) {
+                reasons.add("Accessibility on");
+            }
+            if (messagingSensitive) {
+                reasons.add("Sensitive comms access");
+            }
+            if (riskScore >= 3) {
+                reasons.add("High-risk permissions");
+            }
+
+            ThreatFinding finding = new ThreatFinding(
+                    packageManager.getApplicationLabel(appInfo).toString(),
+                    roleName + " app looks risky.",
+                    "Default handler risk",
+                    packageName,
+                    TextUtils.join(", ", reasons),
+                    "Review or replace the default app if you do not trust it.",
+                    packageName,
+                    packageManager.getApplicationIcon(appInfo),
+                    true,
+                    true
+            );
+            return Collections.singletonList(finding);
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    @Nullable
+    private String getDefaultSmsPackage() {
+        return Telephony.Sms.getDefaultSmsPackage(this);
+    }
+
+    @Nullable
+    private String getDefaultDialerPackage() {
+        Object telecom = getSystemService(Context.TELECOM_SERVICE);
+        if (!(telecom instanceof android.telecom.TelecomManager)) {
+            return null;
+        }
+        return ((android.telecom.TelecomManager) telecom).getDefaultDialerPackage();
+    }
+
+    @Nullable
+    private String getDefaultBrowserPackage() {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://openai.com"));
+        PackageManager.ResolveInfoFlags flags = null;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                android.content.pm.ResolveInfo info = getPackageManager().resolveActivity(
+                        intent,
+                        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY)
+                );
+                return info == null || info.activityInfo == null ? null : info.activityInfo.packageName;
+            }
+        } catch (Exception ignored) {
+            // Fallback below.
+        }
+        android.content.pm.ResolveInfo info = getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        return info == null || info.activityInfo == null ? null : info.activityInfo.packageName;
+    }
+
+    private ThreatFinding buildPackageFinding(
+            @NonNull String packageName,
+            @NonNull PackageManager packageManager,
+            @NonNull String titleOverride,
+            @NonNull String attackType,
+            @NonNull String description,
+            @NonNull String whyFlagged,
+            @NonNull String remediationHint,
+            boolean removable,
+            boolean showIcon
+    ) {
+        try {
+            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+            return new ThreatFinding(
+                    titleOverride + ": " + packageManager.getApplicationLabel(appInfo),
+                    description,
+                    attackType,
+                    packageName,
+                    whyFlagged,
+                    remediationHint,
+                    removable ? packageName : null,
+                    showIcon ? packageManager.getApplicationIcon(appInfo) : null,
+                    removable,
+                    showIcon
+            );
+        } catch (Exception ignored) {
+            return new ThreatFinding(
+                    titleOverride,
+                    description,
+                    attackType,
+                    packageName,
+                    whyFlagged,
+                    remediationHint,
+                    removable ? packageName : null,
+                    null,
+                    removable,
+                    false
+            );
+        }
     }
 
     private Set<String> getEnabledAccessibilityPackages() {
@@ -814,7 +1758,7 @@ public class MainActivity extends AppCompatActivity {
         summaryFindingsContainer.removeAllViews();
 
         if (!hasThreats) {
-            summaryFindingsContainer.addView(createSummaryPill(getString(R.string.summary_clean_chip)));
+            summaryFindingsContainer.addView(createSummaryPill(lastSections.size() + " areas checked. No threat match."));
             return;
         }
 
@@ -1067,7 +2011,7 @@ public class MainActivity extends AppCompatActivity {
         removalScreen.setVisibility(View.GONE);
         circularProgress.show();
         linearProgress.setProgressCompat(0, false);
-        scanCounter.setText("0 / 5");
+        scanCounter.setText("0 / " + TOTAL_SCAN_STEPS);
         currentScanLabel.setText(R.string.preparing_scan);
     }
 
@@ -1108,23 +2052,25 @@ public class MainActivity extends AppCompatActivity {
         }
 
         removalQueue.clear();
+        Set<String> queuedPackages = new LinkedHashSet<>();
         for (ThreatFinding threat : lastThreats) {
-            if (threat.removable && threat.selectedForRemoval && threat.removablePackage != null) {
-                removalQueue.add(threat);
+            if (threat.removable && threat.selectedForRemoval && threat.removablePackage != null
+                    && queuedPackages.add(threat.removablePackage)) {
+                removalQueue.add(threat.removablePackage);
             }
         }
         launchNextRemovalStep();
     }
 
     private void launchNextRemovalStep() {
-        ThreatFinding next = removalQueue.poll();
-        if (next == null) {
+        String nextPackage = removalQueue.poll();
+        if (nextPackage == null) {
             showHomeScreen();
             return;
         }
 
         Intent uninstallIntent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
-        uninstallIntent.setData(Uri.parse("package:" + next.removablePackage));
+        uninstallIntent.setData(Uri.parse("package:" + nextPackage));
         uninstallIntent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
         uninstallLauncher.launch(uninstallIntent);
     }
@@ -1171,6 +2117,10 @@ public class MainActivity extends AppCompatActivity {
             this.summary = summary;
             this.findings = findings;
         }
+    }
+
+    private interface ScanSectionSupplier {
+        ScanSection get();
     }
 
     private static final class ThreatFinding {
