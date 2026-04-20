@@ -10,6 +10,8 @@ import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -38,6 +40,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -75,10 +78,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "FullScanSecurity";
+    private static final String PREFS_NAME = "full_scan_security_prefs";
+    private static final String KEY_LANGUAGE = "selected_language";
+    private static final String DEFAULT_LANGUAGE = "en";
 
     private static final int TOTAL_SCAN_STEPS = 13;
 
@@ -142,6 +149,13 @@ public class MainActivity extends AppCompatActivity {
     private NestedScrollView summaryScreen;
     private NestedScrollView reportScreen;
     private NestedScrollView removalScreen;
+    private ImageButton languageToggleButton;
+    private LinearLayout languageDropdown;
+    private MaterialButton englishLanguageButton;
+    private MaterialButton spanishLanguageButton;
+    private MaterialButton germanLanguageButton;
+    private MaterialButton chineseLanguageButton;
+    private MaterialButton slovenianLanguageButton;
     private MaterialButton startScanButton;
     private MaterialButton viewReportButton;
     private MaterialButton reportPrimaryButton;
@@ -166,6 +180,11 @@ public class MainActivity extends AppCompatActivity {
     private boolean scanInProgress;
     private List<ScanSection> lastSections = new ArrayList<>();
     private List<ThreatFinding> lastThreats = new ArrayList<>();
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(wrapContextWithLocale(newBase, getStoredLanguage(newBase)));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -199,6 +218,13 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen = findViewById(R.id.summaryScreen);
         reportScreen = findViewById(R.id.reportScreen);
         removalScreen = findViewById(R.id.removalScreen);
+        languageToggleButton = findViewById(R.id.languageToggleButton);
+        languageDropdown = findViewById(R.id.languageDropdown);
+        englishLanguageButton = findViewById(R.id.englishLanguageButton);
+        spanishLanguageButton = findViewById(R.id.spanishLanguageButton);
+        germanLanguageButton = findViewById(R.id.germanLanguageButton);
+        chineseLanguageButton = findViewById(R.id.chineseLanguageButton);
+        slovenianLanguageButton = findViewById(R.id.slovenianLanguageButton);
         startScanButton = findViewById(R.id.startScanButton);
         viewReportButton = findViewById(R.id.viewReportButton);
         reportPrimaryButton = findViewById(R.id.reportPrimaryButton);
@@ -246,6 +272,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupActions() {
+        languageToggleButton.setOnClickListener(v -> toggleLanguageDropdown());
+        englishLanguageButton.setOnClickListener(v -> selectLanguage(DEFAULT_LANGUAGE));
+        spanishLanguageButton.setOnClickListener(v -> selectLanguage("es"));
+        germanLanguageButton.setOnClickListener(v -> selectLanguage("de"));
+        chineseLanguageButton.setOnClickListener(v -> selectLanguage("zh"));
+        slovenianLanguageButton.setOnClickListener(v -> selectLanguage("sl"));
         startScanButton.setOnClickListener(v -> requestAccessAndStart());
         viewReportButton.setOnClickListener(v -> showDetailedReport());
         reportPrimaryButton.setOnClickListener(v -> {
@@ -257,6 +289,45 @@ public class MainActivity extends AppCompatActivity {
         });
         removeSelectedButton.setOnClickListener(v -> startRemovalFlow());
         removalBackButton.setOnClickListener(v -> showDetailedReport());
+        refreshLanguageSelectionState();
+    }
+
+    private void toggleLanguageDropdown() {
+        if (homeScreen.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        languageDropdown.setVisibility(languageDropdown.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+    }
+
+    private void selectLanguage(@NonNull String languageCode) {
+        if (languageCode.equals(getSelectedLanguage())) {
+            languageDropdown.setVisibility(View.GONE);
+            refreshLanguageSelectionState();
+            return;
+        }
+
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        preferences.edit().putString(KEY_LANGUAGE, languageCode).apply();
+        recreate();
+    }
+
+    private void refreshLanguageSelectionState() {
+        String selected = getSelectedLanguage();
+        bindLanguageButtonState(englishLanguageButton, DEFAULT_LANGUAGE.equals(selected));
+        bindLanguageButtonState(spanishLanguageButton, "es".equals(selected));
+        bindLanguageButtonState(germanLanguageButton, "de".equals(selected));
+        bindLanguageButtonState(chineseLanguageButton, "zh".equals(selected));
+        bindLanguageButtonState(slovenianLanguageButton, "sl".equals(selected));
+    }
+
+    private void bindLanguageButtonState(@NonNull MaterialButton button, boolean selected) {
+        button.setAlpha(selected ? 1f : 0.72f);
+        button.setStrokeWidth(selected ? dp(2) : dp(1));
+    }
+
+    @NonNull
+    private String getSelectedLanguage() {
+        return getStoredLanguage(this);
     }
 
     private void requestAccessAndStart() {
@@ -303,55 +374,55 @@ public class MainActivity extends AppCompatActivity {
         int totalSteps = TOTAL_SCAN_STEPS;
 
         updateScanProgress(1, totalSteps, getString(R.string.section_apps));
-        sections.add(runSectionSafely(getString(R.string.section_apps), "App scan degraded.", this::scanInstalledApps));
+        sections.add(runSectionSafely(getString(R.string.section_apps), getString(R.string.summary_section_apps_degraded), this::scanInstalledApps));
         SystemClock.sleep(320);
 
         updateScanProgress(2, totalSteps, getString(R.string.section_permissions));
-        sections.add(runSectionSafely(getString(R.string.section_permissions), "Permission scan degraded.", this::scanPermissionExposure));
+        sections.add(runSectionSafely(getString(R.string.section_permissions), getString(R.string.summary_section_permissions_degraded), this::scanPermissionExposure));
         SystemClock.sleep(320);
 
         updateScanProgress(3, totalSteps, getString(R.string.section_accessibility));
-        sections.add(runSectionSafely(getString(R.string.section_accessibility), "Accessibility scan degraded.", this::scanAccessibilityAndAdminAbuse));
+        sections.add(runSectionSafely(getString(R.string.section_accessibility), getString(R.string.summary_section_accessibility_degraded), this::scanAccessibilityAndAdminAbuse));
         SystemClock.sleep(320);
 
-        updateScanProgress(4, totalSteps, "Network / DNS / VPN");
-        sections.add(runSectionSafely("Network / DNS / VPN", "Network scan degraded.", this::scanNetworkSecurityPosture));
+        updateScanProgress(4, totalSteps, getString(R.string.section_network));
+        sections.add(runSectionSafely(getString(R.string.section_network), getString(R.string.summary_section_network_degraded), this::scanNetworkSecurityPosture));
         SystemClock.sleep(320);
 
-        updateScanProgress(5, totalSteps, "Install trust");
-        sections.add(runSectionSafely("Install trust", "Install trust scan degraded.", this::scanInstallTrust));
+        updateScanProgress(5, totalSteps, getString(R.string.section_install_trust));
+        sections.add(runSectionSafely(getString(R.string.section_install_trust), getString(R.string.summary_section_install_trust_degraded), this::scanInstallTrust));
         SystemClock.sleep(320);
 
-        updateScanProgress(6, totalSteps, "Boot / integrity");
-        sections.add(runSectionSafely("Boot / integrity", "Integrity scan degraded.", this::scanBootIntegrity));
+        updateScanProgress(6, totalSteps, getString(R.string.section_integrity));
+        sections.add(runSectionSafely(getString(R.string.section_integrity), getString(R.string.summary_section_integrity_degraded), this::scanBootIntegrity));
         SystemClock.sleep(320);
 
-        updateScanProgress(7, totalSteps, "Notification / overlay");
-        sections.add(runSectionSafely("Notification / overlay", "Persistence scan degraded.", this::scanNotificationAndOverlayAbuse));
+        updateScanProgress(7, totalSteps, getString(R.string.section_persistence));
+        sections.add(runSectionSafely(getString(R.string.section_persistence), getString(R.string.summary_section_persistence_degraded), this::scanNotificationAndOverlayAbuse));
         SystemClock.sleep(320);
 
-        updateScanProgress(8, totalSteps, "Browser / SMS / call");
-        sections.add(runSectionSafely("Browser / SMS / call", "Default-app scan degraded.", this::scanDefaultAppRedirectionRisk));
+        updateScanProgress(8, totalSteps, getString(R.string.section_browser_sms_call));
+        sections.add(runSectionSafely(getString(R.string.section_browser_sms_call), getString(R.string.summary_section_default_apps_degraded), this::scanDefaultAppRedirectionRisk));
         SystemClock.sleep(320);
 
-        updateScanProgress(9, totalSteps, "Live posture");
-        sections.add(runSectionSafely("Live posture", "Live posture scan degraded.", this::scanLivePosture));
+        updateScanProgress(9, totalSteps, getString(R.string.section_live_posture));
+        sections.add(runSectionSafely(getString(R.string.section_live_posture), getString(R.string.summary_section_live_posture_degraded), this::scanLivePosture));
         SystemClock.sleep(320);
 
-        updateScanProgress(10, totalSteps, "Input methods");
-        sections.add(runSectionSafely("Input methods", "Input-method scan degraded.", this::scanInputMethodRisk));
+        updateScanProgress(10, totalSteps, getString(R.string.section_input_methods));
+        sections.add(runSectionSafely(getString(R.string.section_input_methods), getString(R.string.summary_section_input_methods_degraded), this::scanInputMethodRisk));
         SystemClock.sleep(320);
 
-        updateScanProgress(11, totalSteps, "Surveillance risk");
-        sections.add(runSectionSafely("Surveillance risk", "Surveillance scan degraded.", this::scanSurveillanceRisk));
+        updateScanProgress(11, totalSteps, getString(R.string.section_surveillance));
+        sections.add(runSectionSafely(getString(R.string.section_surveillance), getString(R.string.summary_section_surveillance_degraded), this::scanSurveillanceRisk));
         SystemClock.sleep(320);
 
         updateScanProgress(12, totalSteps, getString(R.string.section_device));
-        sections.add(runSectionSafely(getString(R.string.section_device), "Device posture scan degraded.", this::scanDeviceSecurityPosture));
+        sections.add(runSectionSafely(getString(R.string.section_device), getString(R.string.summary_section_device_degraded), this::scanDeviceSecurityPosture));
         SystemClock.sleep(320);
 
         updateScanProgress(13, totalSteps, getString(R.string.section_storage));
-        sections.add(runSectionSafely(getString(R.string.section_storage), "Storage scan degraded.", this::scanReachableStorageSurfaces));
+        sections.add(runSectionSafely(getString(R.string.section_storage), getString(R.string.summary_section_storage_degraded), this::scanReachableStorageSurfaces));
         SystemClock.sleep(380);
 
         return sections;
@@ -398,22 +469,22 @@ public class MainActivity extends AppCompatActivity {
 
                 if (TextUtils.isEmpty(installer) || installer.toLowerCase(Locale.US).contains("unknown")) {
                     riskScore += 2;
-                    reasons.add("Unknown source");
+                    reasons.add(getString(R.string.reason_unknown_source));
                 }
 
                 if ((appInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
                     riskScore += 2;
-                    reasons.add("Debug build");
+                    reasons.add(getString(R.string.reason_debug_build));
                 }
 
                 if (containsSuspiciousKeyword(label) || containsSuspiciousKeyword(appInfo.packageName)) {
                     riskScore += 1;
-                    reasons.add("Suspicious name");
+                    reasons.add(getString(R.string.reason_suspicious_name));
                 }
 
                 if (countHighRiskPermissions(requestedPermissions) >= 4) {
                     riskScore += 2;
-                    reasons.add("High-risk permissions");
+                    reasons.add(getString(R.string.reason_high_risk_permissions));
                 }
 
                 if (riskScore >= 3) {
@@ -517,13 +588,13 @@ public class MainActivity extends AppCompatActivity {
 
                 List<String> reasons = new ArrayList<>();
                 if (accessibility) {
-                    reasons.add("Accessibility on");
+                    reasons.add(getString(R.string.reason_accessibility_on));
                 }
                 if (admin) {
-                    reasons.add("Admin active");
+                    reasons.add(getString(R.string.reason_admin_active));
                 }
                 if (overlay) {
-                    reasons.add("Overlay access");
+                    reasons.add(getString(R.string.reason_overlay_access));
                 }
 
                 findings.add(new ThreatFinding(
@@ -556,12 +627,12 @@ public class MainActivity extends AppCompatActivity {
             String privateDnsHost = Settings.Global.getString(getContentResolver(), "private_dns_specifier");
             if (TextUtils.isEmpty(privateDnsMode) || "off".equalsIgnoreCase(privateDnsMode)) {
                 findings.add(new ThreatFinding(
-                        "Private DNS off",
-                        "DNS traffic is not hardened.",
-                        "DNS posture",
-                        "Network settings",
-                        "private_dns_mode=" + safeValue(privateDnsMode),
-                        "Use automatic or a trusted provider.",
+                        getString(R.string.finding_private_dns_off_title),
+                        getString(R.string.finding_private_dns_off_body),
+                        getString(R.string.attack_type_dns_posture),
+                        getString(R.string.location_network_settings),
+                        getString(R.string.detail_private_dns_mode) + " " + safeValue(privateDnsMode),
+                        getString(R.string.hint_trusted_dns),
                         null,
                         null,
                         false,
@@ -570,12 +641,12 @@ public class MainActivity extends AppCompatActivity {
             } else if ("hostname".equalsIgnoreCase(privateDnsMode) && !TextUtils.isEmpty(privateDnsHost)
                     && !isTrustedPrivateDnsHost(privateDnsHost)) {
                 findings.add(new ThreatFinding(
-                        "Custom Private DNS",
-                        "A custom DNS host is active.",
-                        "DNS posture",
+                        getString(R.string.finding_custom_private_dns_title),
+                        getString(R.string.finding_custom_private_dns_body),
+                        getString(R.string.attack_type_dns_posture),
                         privateDnsHost,
-                        "Private DNS host is not in the trusted allowlist.",
-                        "Verify the resolver owner.",
+                        getString(R.string.detail_untrusted_private_dns),
+                        getString(R.string.hint_verify_resolver),
                         null,
                         null,
                         false,
@@ -590,12 +661,12 @@ public class MainActivity extends AppCompatActivity {
             int userCaCount = getUserInstalledCaCount();
             if (userCaCount > 0) {
                 findings.add(new ThreatFinding(
-                        "User CA certificates found",
-                        "User-added CA certs can intercept traffic.",
-                        "TLS trust surface",
-                        "System trust store",
-                        userCaCount + " user CA aliases detected.",
-                        "Review user-installed credentials in security settings.",
+                        getString(R.string.finding_user_ca_title),
+                        getString(R.string.finding_user_ca_body),
+                        getString(R.string.attack_type_tls_surface),
+                        getString(R.string.location_trust_store),
+                        getString(R.string.detail_user_ca_count, userCaCount),
+                        getString(R.string.hint_review_credentials),
                         null,
                         null,
                         false,
@@ -610,12 +681,12 @@ public class MainActivity extends AppCompatActivity {
             ProxyInfo proxyInfo = getDefaultProxyInfo();
             if (proxyInfo != null && !TextUtils.isEmpty(proxyInfo.getHost())) {
                 findings.add(new ThreatFinding(
-                        "Proxy profile active",
-                        "Traffic may be routed through a proxy.",
-                        "Proxy posture",
+                        getString(R.string.finding_proxy_active_title),
+                        getString(R.string.finding_proxy_active_body),
+                        getString(R.string.attack_type_proxy_posture),
                         proxyInfo.getHost() + ":" + proxyInfo.getPort(),
-                        "Default proxy is configured.",
-                        "Remove it if you did not set it.",
+                        getString(R.string.detail_default_proxy_configured),
+                        getString(R.string.hint_remove_unexpected_proxy),
                         null,
                         null,
                         false,
@@ -632,22 +703,22 @@ public class MainActivity extends AppCompatActivity {
                 findings.add(buildPackageFinding(
                         alwaysOnVpnPackage,
                         packageManager,
-                        "Always-on VPN active",
-                        "VPN posture",
-                        "An always-on VPN is configured.",
-                        "Always-on VPN package: " + alwaysOnVpnPackage,
-                        "Review this VPN if you did not choose it.",
+                        getString(R.string.finding_always_on_vpn_title),
+                        getString(R.string.attack_type_vpn_posture),
+                        getString(R.string.finding_always_on_vpn_body),
+                        getString(R.string.detail_always_on_vpn_package) + " " + alwaysOnVpnPackage,
+                        getString(R.string.hint_review_vpn),
                         true,
                         true
                 ));
             } else if (isVpnActive()) {
                 findings.add(new ThreatFinding(
-                        "VPN transport active",
-                        "A VPN is connected.",
-                        "VPN posture",
-                        "Active network",
-                        "NetworkCapabilities reports VPN transport.",
-                        "Verify the VPN provider.",
+                        getString(R.string.finding_vpn_transport_title),
+                        getString(R.string.finding_vpn_transport_body),
+                        getString(R.string.attack_type_vpn_posture),
+                        getString(R.string.location_active_network),
+                        getString(R.string.detail_vpn_transport),
+                        getString(R.string.hint_verify_vpn),
                         null,
                         null,
                         false,
@@ -658,7 +729,7 @@ public class MainActivity extends AppCompatActivity {
             Log.w(TAG, "VPN check failed", e);
         }
 
-        return new ScanSection("Network / DNS / VPN", "Checked DNS, VPN, proxy and user trust store.", findings);
+        return new ScanSection(getString(R.string.section_network), getString(R.string.summary_network), findings);
     }
 
     private ScanSection runSectionSafely(
@@ -673,11 +744,11 @@ public class MainActivity extends AppCompatActivity {
             List<ThreatFinding> findings = new ArrayList<>();
             findings.add(new ThreatFinding(
                     title + " unavailable",
-                    "This check could not finish on this device.",
-                    "Scan stability",
+                    getString(R.string.finding_scan_unavailable_body),
+                    getString(R.string.attack_type_scan_stability),
                     title,
                     throwable.getClass().getSimpleName(),
-                    "The app kept scanning the remaining sections.",
+                    getString(R.string.hint_scan_continued),
                     null,
                     null,
                     false,
@@ -694,12 +765,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (Settings.Global.getInt(getContentResolver(), "package_verifier_enable", 1) == 0) {
             findings.add(new ThreatFinding(
-                    "Package verifier off",
-                    "Install verification is disabled.",
-                    "Install trust",
-                    "System settings",
-                    "PACKAGE_VERIFIER_ENABLE=0",
-                    "Turn install verification back on.",
+                    getString(R.string.finding_package_verifier_off_title),
+                    getString(R.string.finding_package_verifier_off_body),
+                    getString(R.string.attack_type_install_trust),
+                    getString(R.string.location_system_settings),
+                    getString(R.string.detail_package_verifier_off),
+                    getString(R.string.hint_enable_install_verifier),
                     null,
                     null,
                     false,
@@ -709,12 +780,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (Settings.Global.getInt(getContentResolver(), "verifier_verify_adb_installs", 1) == 0) {
             findings.add(new ThreatFinding(
-                    "ADB verifier off",
-                    "ADB installs are not verified.",
-                    "Install trust",
-                    "System settings",
-                    "verifier_verify_adb_installs=0",
-                    "Re-enable ADB install verification.",
+                    getString(R.string.finding_adb_verifier_off_title),
+                    getString(R.string.finding_adb_verifier_off_body),
+                    getString(R.string.attack_type_install_trust),
+                    getString(R.string.location_system_settings),
+                    getString(R.string.detail_adb_verifier_off),
+                    getString(R.string.hint_enable_adb_verifier),
                     null,
                     null,
                     false,
@@ -724,12 +795,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (!isPackageInstalled("com.google.android.gms")) {
             findings.add(new ThreatFinding(
-                    "Play services missing",
-                    "Play Protect state cannot be confirmed.",
-                    "Install trust",
-                    "Google services",
-                    "com.google.android.gms not found.",
-                    "Use another trust source if Play Protect is absent.",
+                    getString(R.string.finding_play_services_missing_title),
+                    getString(R.string.finding_play_services_missing_body),
+                    getString(R.string.attack_type_install_trust),
+                    getString(R.string.location_google_services),
+                    getString(R.string.detail_play_services_missing),
+                    getString(R.string.hint_alt_trust_source),
                     null,
                     null,
                     false,
@@ -750,11 +821,11 @@ public class MainActivity extends AppCompatActivity {
                 }
                 findings.add(new ThreatFinding(
                         packageManager.getApplicationLabel(appInfo).toString(),
-                        "App can request unknown installs.",
-                        "Install trust",
+                        getString(R.string.finding_unknown_install_app_body),
+                        getString(R.string.attack_type_install_trust),
                         appInfo.packageName,
-                        "REQUEST_INSTALL_PACKAGES present.",
-                        "Remove it if you do not trust its install path.",
+                        getString(R.string.detail_request_install_packages),
+                        getString(R.string.hint_remove_untrusted_install_app),
                         appInfo.packageName,
                         packageManager.getApplicationIcon(appInfo),
                         true,
@@ -765,7 +836,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        return new ScanSection("Install trust", reviewed + " apps checked for install trust signals.", findings);
+        return new ScanSection(getString(R.string.section_install_trust), getString(R.string.summary_install_trust, reviewed), findings);
     }
 
     private ScanSection scanBootIntegrity() {
@@ -774,12 +845,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (Build.TAGS != null && Build.TAGS.contains("test-keys")) {
             findings.add(new ThreatFinding(
-                    "Test-keys build",
-                    "Firmware uses test-keys.",
-                    "Integrity",
+                    getString(R.string.finding_test_keys_title),
+                    getString(R.string.finding_test_keys_body),
+                    getString(R.string.attack_type_integrity),
                     Build.FINGERPRINT,
-                    "Build.TAGS contains test-keys.",
-                    "Treat the device as lower trust.",
+                    getString(R.string.detail_test_keys),
+                    getString(R.string.hint_lower_trust),
                     null,
                     null,
                     false,
@@ -789,12 +860,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (isProbablyEmulator()) {
             findings.add(new ThreatFinding(
-                    "Emulator detected",
-                    "This device looks virtualized.",
-                    "Integrity",
+                    getString(R.string.finding_emulator_title),
+                    getString(R.string.finding_emulator_body),
+                    getString(R.string.attack_type_integrity),
                     Build.MODEL,
-                    "Build fingerprint and hardware match emulator heuristics.",
-                    "Use a physical device for stronger assurance.",
+                    getString(R.string.detail_emulator_heuristics),
+                    getString(R.string.hint_use_physical_device),
                     null,
                     null,
                     false,
@@ -804,12 +875,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (hasRootBinary()) {
             findings.add(new ThreatFinding(
-                    "Root binary found",
-                    "Root artifacts were detected.",
-                    "Integrity",
-                    "Filesystem",
-                    "Known su or Magisk paths exist.",
-                    "Review root tooling or firmware changes.",
+                    getString(R.string.finding_root_binary_title),
+                    getString(R.string.finding_root_binary_body),
+                    getString(R.string.attack_type_integrity),
+                    getString(R.string.location_filesystem),
+                    getString(R.string.detail_root_paths),
+                    getString(R.string.hint_review_root_tooling),
                     null,
                     null,
                     false,
@@ -823,13 +894,15 @@ public class MainActivity extends AppCompatActivity {
         if ("unlocked".equalsIgnoreCase(bootState) || "0".equals(flashLocked)
                 || (!TextUtils.isEmpty(verifiedBoot) && !"green".equalsIgnoreCase(verifiedBoot))) {
             findings.add(new ThreatFinding(
-                    "Boot integrity weakened",
-                    "Bootloader or verified boot looks weakened.",
-                    "Integrity",
-                    "Boot chain",
-                    "device_state=" + safeValue(bootState) + ", flash.locked=" + safeValue(flashLocked)
-                            + ", verifiedbootstate=" + safeValue(verifiedBoot),
-                    "Re-lock the boot chain if this is unexpected.",
+                    getString(R.string.finding_boot_integrity_title),
+                    getString(R.string.finding_boot_integrity_body),
+                    getString(R.string.attack_type_integrity),
+                    getString(R.string.location_boot_chain),
+                    getString(R.string.detail_boot_integrity_values,
+                            safeValue(bootState),
+                            safeValue(flashLocked),
+                            safeValue(verifiedBoot)),
+                    getString(R.string.hint_relock_boot_chain),
                     null,
                     null,
                     false,
@@ -844,17 +917,17 @@ public class MainActivity extends AppCompatActivity {
             findings.add(buildPackageFinding(
                     rootPackage,
                     packageManager,
-                    "Root management app",
-                    "Integrity",
-                    "Known root management tooling is installed.",
-                    "Installed package matches a root app signature.",
-                    "Remove it if the device should stay stock.",
+                    getString(R.string.finding_root_management_title),
+                    getString(R.string.attack_type_integrity),
+                    getString(R.string.finding_root_management_body),
+                    getString(R.string.detail_root_management_signature),
+                    getString(R.string.hint_remove_root_tooling),
                     true,
                     true
             ));
         }
 
-        return new ScanSection("Boot / integrity", "Checked root, emulator and verified-boot indicators.", findings);
+        return new ScanSection(getString(R.string.section_integrity), getString(R.string.summary_integrity), findings);
     }
 
     private ScanSection scanNotificationAndOverlayAbuse() {
@@ -883,25 +956,25 @@ public class MainActivity extends AppCompatActivity {
 
                 List<String> reasons = new ArrayList<>();
                 if (notificationListener) {
-                    reasons.add("Notification access");
+                    reasons.add(getString(R.string.reason_notification_access));
                 }
                 if (overlay) {
-                    reasons.add("Overlay");
+                    reasons.add(getString(R.string.reason_overlay));
                 }
                 if (bootPersistence) {
-                    reasons.add("Boot start");
+                    reasons.add(getString(R.string.reason_boot_start));
                 }
                 if (batteryBypass) {
-                    reasons.add("Battery bypass");
+                    reasons.add(getString(R.string.reason_battery_bypass));
                 }
 
                 findings.add(new ThreatFinding(
                         packageManager.getApplicationLabel(appInfo).toString(),
-                        "App holds persistence or interception privileges.",
-                        "Persistence",
+                        getString(R.string.finding_persistence_body),
+                        getString(R.string.attack_type_persistence),
                         appInfo.packageName,
                         TextUtils.join(", ", reasons),
-                        "Disable the risky capabilities if the app is not trusted.",
+                        getString(R.string.hint_disable_untrusted_persistence),
                         appInfo.packageName,
                         packageManager.getApplicationIcon(appInfo),
                         true,
@@ -912,7 +985,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        return new ScanSection("Notification / overlay", "Checked listeners, overlays, boot start and battery bypass.", findings);
+        return new ScanSection(getString(R.string.section_persistence), getString(R.string.summary_persistence), findings);
     }
 
     private ScanSection scanDefaultAppRedirectionRisk() {
@@ -920,11 +993,11 @@ public class MainActivity extends AppCompatActivity {
         List<ThreatFinding> findings = new ArrayList<>();
         Set<String> accessibilityPackages = getEnabledAccessibilityPackages();
 
-        findings.addAll(buildDefaultRoleFindings(packageManager, "Default SMS", getDefaultSmsPackage(), accessibilityPackages));
-        findings.addAll(buildDefaultRoleFindings(packageManager, "Default dialer", getDefaultDialerPackage(), accessibilityPackages));
-        findings.addAll(buildDefaultRoleFindings(packageManager, "Default browser", getDefaultBrowserPackage(), accessibilityPackages));
+        findings.addAll(buildDefaultRoleFindings(packageManager, getString(R.string.role_default_sms), getDefaultSmsPackage(), accessibilityPackages));
+        findings.addAll(buildDefaultRoleFindings(packageManager, getString(R.string.role_default_dialer), getDefaultDialerPackage(), accessibilityPackages));
+        findings.addAll(buildDefaultRoleFindings(packageManager, getString(R.string.role_default_browser), getDefaultBrowserPackage(), accessibilityPackages));
 
-        return new ScanSection("Browser / SMS / call", "Checked default communication and browsing handlers.", findings);
+        return new ScanSection(getString(R.string.section_browser_sms_call), getString(R.string.summary_browser_sms_call), findings);
     }
 
     private ScanSection scanLivePosture() {
@@ -932,12 +1005,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
             findings.add(new ThreatFinding(
-                    "Alerts muted",
-                    "This app cannot post security alerts.",
-                    "Live posture",
+                    getString(R.string.finding_alerts_muted_title),
+                    getString(R.string.finding_alerts_muted_body),
+                    getString(R.string.attack_type_live_posture),
                     getPackageName(),
-                    "Notifications are disabled for the app.",
-                    "Enable notifications if you want ongoing warnings.",
+                    getString(R.string.detail_notifications_disabled),
+                    getString(R.string.hint_enable_notifications),
                     null,
                     null,
                     false,
@@ -947,12 +1020,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (!hasUsageStatsAccess()) {
             findings.add(new ThreatFinding(
-                    "Usage access missing",
-                    "Live posture checks are reduced.",
-                    "Live posture",
+                    getString(R.string.finding_usage_access_missing_title),
+                    getString(R.string.finding_usage_access_missing_body),
+                    getString(R.string.attack_type_live_posture),
                     getPackageName(),
-                    "Usage stats access is not granted.",
-                    "Grant usage access for broader posture checks.",
+                    getString(R.string.detail_usage_access_missing),
+                    getString(R.string.hint_grant_usage_access),
                     null,
                     null,
                     false,
@@ -962,12 +1035,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (!isIgnoringBatteryOptimizations(getPackageName())) {
             findings.add(new ThreatFinding(
-                    "Background checks may sleep",
-                    "Battery optimization can delay live checks.",
-                    "Live posture",
+                    getString(R.string.finding_background_sleep_title),
+                    getString(R.string.finding_background_sleep_body),
+                    getString(R.string.attack_type_live_posture),
                     getPackageName(),
-                    "App is still battery optimized.",
-                    "Ignore optimization only if you want stronger background alerts.",
+                    getString(R.string.detail_battery_optimized),
+                    getString(R.string.hint_ignore_optimization_optional),
                     null,
                     null,
                     false,
@@ -975,7 +1048,7 @@ public class MainActivity extends AppCompatActivity {
             ));
         }
 
-        return new ScanSection("Live posture", "Checked whether live guard rails can keep warning you.", findings);
+        return new ScanSection(getString(R.string.section_live_posture), getString(R.string.summary_live_posture), findings);
     }
 
     private ScanSection scanInputMethodRisk() {
@@ -1003,29 +1076,29 @@ public class MainActivity extends AppCompatActivity {
 
                 List<String> reasons = new ArrayList<>();
                 if (defaultIme) {
-                    reasons.add("Default keyboard");
+                    reasons.add(getString(R.string.reason_default_keyboard));
                 }
                 if (internet) {
-                    reasons.add("Network access");
+                    reasons.add(getString(R.string.reason_network_access));
                 }
                 if (contacts) {
-                    reasons.add("Contacts access");
+                    reasons.add(getString(R.string.reason_contacts_access));
                 }
                 if (microphone) {
-                    reasons.add("Microphone");
+                    reasons.add(getString(R.string.reason_microphone));
                 }
                 if (overlay) {
-                    reasons.add("Overlay");
+                    reasons.add(getString(R.string.reason_overlay));
                 }
 
                 if (defaultIme || contacts || microphone || overlay) {
                     findings.add(new ThreatFinding(
                             packageManager.getApplicationLabel(appInfo).toString(),
-                            "Keyboard app has elevated data access.",
-                            "Keylogger risk",
+                            getString(R.string.finding_keyboard_risk_body),
+                            getString(R.string.attack_type_keylogger),
                             packageName,
                             TextUtils.join(", ", reasons),
-                            "Review or replace the keyboard if you do not trust it.",
+                            getString(R.string.hint_review_keyboard),
                             packageName,
                             packageManager.getApplicationIcon(appInfo),
                             true,
@@ -1037,7 +1110,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        return new ScanSection("Input methods", "Checked enabled keyboards and default input method.", findings);
+        return new ScanSection(getString(R.string.section_input_methods), getString(R.string.summary_input_methods), findings);
     }
 
     private ScanSection scanSurveillanceRisk() {
@@ -1055,23 +1128,23 @@ public class MainActivity extends AppCompatActivity {
                 List<String> requested = getRequestedPermissions(packageInfo);
                 List<String> matched = new ArrayList<>();
 
-                maybeAddPermissionLabel(requested, Manifest.permission.RECORD_AUDIO, "Mic", matched);
-                maybeAddPermissionLabel(requested, Manifest.permission.CAMERA, "Camera", matched);
-                maybeAddPermissionLabel(requested, Manifest.permission.ACCESS_FINE_LOCATION, "Location", matched);
-                maybeAddPermissionLabel(requested, Manifest.permission.READ_CONTACTS, "Contacts", matched);
-                maybeAddPermissionLabel(requested, Manifest.permission.READ_SMS, "SMS", matched);
-                maybeAddPermissionLabel(requested, Manifest.permission.READ_CALL_LOG, "Call log", matched);
-                maybeAddPermissionLabel(requested, Manifest.permission.QUERY_ALL_PACKAGES, "All apps", matched);
-                maybeAddPermissionLabel(requested, "android.permission.SYSTEM_ALERT_WINDOW", "Overlay", matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.RECORD_AUDIO, getString(R.string.label_mic), matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.CAMERA, getString(R.string.label_camera), matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.ACCESS_FINE_LOCATION, getString(R.string.label_location), matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.READ_CONTACTS, getString(R.string.label_contacts), matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.READ_SMS, getString(R.string.label_sms), matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.READ_CALL_LOG, getString(R.string.label_call_log), matched);
+                maybeAddPermissionLabel(requested, Manifest.permission.QUERY_ALL_PACKAGES, getString(R.string.label_all_apps), matched);
+                maybeAddPermissionLabel(requested, "android.permission.SYSTEM_ALERT_WINDOW", getString(R.string.reason_overlay), matched);
 
                 if (matched.size() >= 4) {
                     findings.add(new ThreatFinding(
                             packageManager.getApplicationLabel(appInfo).toString(),
-                            "App has a stalkingware-like data profile.",
-                            "Surveillance risk",
+                            getString(R.string.finding_surveillance_body),
+                            getString(R.string.attack_type_surveillance),
                             appInfo.packageName,
                             TextUtils.join(", ", matched),
-                            "Review the app if it does not clearly need this access.",
+                            getString(R.string.hint_review_surveillance_app),
                             appInfo.packageName,
                             packageManager.getApplicationIcon(appInfo),
                             true,
@@ -1083,7 +1156,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        return new ScanSection("Surveillance risk", reviewed + " apps checked for stalkingware-style access.", findings);
+        return new ScanSection(getString(R.string.section_surveillance), getString(R.string.summary_surveillance, reviewed), findings);
     }
 
     private ScanSection scanDeviceSecurityPosture() {
@@ -1326,13 +1399,13 @@ public class MainActivity extends AppCompatActivity {
             return getString(R.string.label_unknown);
         }
         if ("com.android.vending".equals(installer)) {
-            return "Google Play";
+            return getString(R.string.label_google_play);
         }
         return installer;
     }
 
     private String safeValue(@Nullable String value) {
-        return TextUtils.isEmpty(value) ? "unknown" : value;
+        return TextUtils.isEmpty(value) ? getString(R.string.label_unknown) : value;
     }
 
     private boolean isTrustedPrivateDnsHost(@NonNull String host) {
@@ -1548,25 +1621,25 @@ public class MainActivity extends AppCompatActivity {
 
             List<String> reasons = new ArrayList<>();
             if (suspiciousInstaller) {
-                reasons.add("Unknown installer");
+                reasons.add(getString(R.string.reason_unknown_installer));
             }
             if (accessibility) {
-                reasons.add("Accessibility on");
+                reasons.add(getString(R.string.reason_accessibility_on));
             }
             if (messagingSensitive) {
-                reasons.add("Sensitive comms access");
+                reasons.add(getString(R.string.reason_sensitive_comms));
             }
             if (riskScore >= 3) {
-                reasons.add("High-risk permissions");
+                reasons.add(getString(R.string.reason_high_risk_permissions));
             }
 
             ThreatFinding finding = new ThreatFinding(
                     packageManager.getApplicationLabel(appInfo).toString(),
-                    roleName + " app looks risky.",
-                    "Default handler risk",
+                    getString(R.string.finding_default_handler_body, roleName),
+                    getString(R.string.attack_type_default_handler),
                     packageName,
                     TextUtils.join(", ", reasons),
-                    "Review or replace the default app if you do not trust it.",
+                    getString(R.string.hint_review_default_handler),
                     packageName,
                     packageManager.getApplicationIcon(appInfo),
                     true,
@@ -1758,7 +1831,8 @@ public class MainActivity extends AppCompatActivity {
         summaryFindingsContainer.removeAllViews();
 
         if (!hasThreats) {
-            summaryFindingsContainer.addView(createSummaryPill(lastSections.size() + " areas checked. No threat match."));
+            summaryFindingsContainer.addView(createSummaryPill(
+                    getString(R.string.summary_clean_chip_dynamic, lastSections.size())));
             return;
         }
 
@@ -2001,6 +2075,7 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.GONE);
         removalScreen.setVisibility(View.GONE);
+        languageDropdown.setVisibility(View.GONE);
     }
 
     private void showScanScreen() {
@@ -2009,9 +2084,10 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.GONE);
         removalScreen.setVisibility(View.GONE);
+        languageDropdown.setVisibility(View.GONE);
         circularProgress.show();
         linearProgress.setProgressCompat(0, false);
-        scanCounter.setText("0 / " + TOTAL_SCAN_STEPS);
+        scanCounter.setText(getString(R.string.scan_counter_value, 0, TOTAL_SCAN_STEPS));
         currentScanLabel.setText(R.string.preparing_scan);
     }
 
@@ -2021,6 +2097,7 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen.setVisibility(View.VISIBLE);
         reportScreen.setVisibility(View.GONE);
         removalScreen.setVisibility(View.GONE);
+        languageDropdown.setVisibility(View.GONE);
         summaryScreen.fullScroll(View.FOCUS_UP);
         summaryBody.setTextColor(ContextCompat.getColor(this, R.color.summary_text));
         summaryTitle.setTextColor(ContextCompat.getColor(this, R.color.summary_text));
@@ -2033,6 +2110,7 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.VISIBLE);
         removalScreen.setVisibility(View.GONE);
+        languageDropdown.setVisibility(View.GONE);
         reportScreen.fullScroll(View.FOCUS_UP);
     }
 
@@ -2042,6 +2120,7 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.GONE);
         removalScreen.setVisibility(View.VISIBLE);
+        languageDropdown.setVisibility(View.GONE);
         renderRemovalList();
         removalScreen.fullScroll(View.FOCUS_UP);
     }
@@ -2121,6 +2200,33 @@ public class MainActivity extends AppCompatActivity {
 
     private interface ScanSectionSupplier {
         ScanSection get();
+    }
+
+    @NonNull
+    private static String getStoredLanguage(@NonNull Context context) {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_LANGUAGE, DEFAULT_LANGUAGE);
+    }
+
+    @NonNull
+    private static Context wrapContextWithLocale(@NonNull Context context, @Nullable String languageCode) {
+        Locale locale = createLocale(languageCode);
+        Locale.setDefault(locale);
+        Configuration configuration = new Configuration(context.getResources().getConfiguration());
+        configuration.setLocale(locale);
+        configuration.setLayoutDirection(locale);
+        return context.createConfigurationContext(configuration);
+    }
+
+    @NonNull
+    private static Locale createLocale(@Nullable String languageCode) {
+        if (TextUtils.isEmpty(languageCode)) {
+            return Locale.ENGLISH;
+        }
+        if ("zh".equals(languageCode)) {
+            return Locale.SIMPLIFIED_CHINESE;
+        }
+        return Locale.forLanguageTag(languageCode);
     }
 
     private static final class ThreatFinding {
