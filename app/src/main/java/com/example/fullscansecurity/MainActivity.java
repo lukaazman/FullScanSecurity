@@ -13,6 +13,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.ComponentInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
@@ -38,6 +39,9 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.accessibility.AccessibilityManager;
+import android.animation.ValueAnimator;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ImageButton;
@@ -62,13 +66,19 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.lang.reflect.Method;
 import java.security.KeyStore;
+import java.text.DateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -78,16 +88,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "FullScanSecurity";
     private static final String PREFS_NAME = "full_scan_security_prefs";
     private static final String KEY_LANGUAGE = "selected_language";
+    private static final String KEY_ACTIVE_SCREEN = "active_screen";
+    private static final String KEY_ACTIVE_SCAN = "active_scan";
+    private static final String KEY_SCAN_HISTORY = "scan_history";
     private static final String DEFAULT_LANGUAGE = "en";
+    private static final String SCREEN_HOME = "home";
+    private static final String SCREEN_SUMMARY = "summary";
+    private static final String SCREEN_REPORT = "report";
+    private static final String SCREEN_REMOVAL = "removal";
+    private static final int MAX_HISTORY_ENTRIES = 12;
+    private static final String PACKAGE_NAME_PATTERN = "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$";
 
-    private static final int TOTAL_SCAN_STEPS = 13;
+    private static final int TOTAL_SCAN_STEPS = 15;
 
     private static final List<String> HIGH_RISK_PERMISSIONS = Arrays.asList(
             Manifest.permission.READ_SMS,
@@ -142,10 +160,13 @@ public class MainActivity extends AppCompatActivity {
 
     private final ExecutorService scanExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final ArrayDeque<String> removalQueue = new ArrayDeque<>();
+    private final ArrayDeque<RemediationAction> remediationQueue = new ArrayDeque<>();
 
-    private LinearLayout homeScreen;
+    private NestedScrollView homeScreen;
     private LinearLayout scanScreen;
+    private LinearLayout homeContent;
+    private LinearLayout homeHeroCard;
+    private LinearLayout scanningPanel;
     private NestedScrollView summaryScreen;
     private NestedScrollView reportScreen;
     private NestedScrollView removalScreen;
@@ -161,23 +182,33 @@ public class MainActivity extends AppCompatActivity {
     private MaterialButton reportPrimaryButton;
     private MaterialButton removeSelectedButton;
     private MaterialButton removalBackButton;
+    private TextView homeTitle;
+    private TextView scanTitle;
+    private TextView reportTitle;
+    private TextView removalTitle;
     private TextView currentScanLabel;
     private TextView scanCounter;
     private TextView scanFootnote;
+    private TextView removalSelectionSummary;
     private LinearProgressIndicator linearProgress;
     private CircularProgressIndicator circularProgress;
     private TextView summaryTitle;
     private TextView summaryBody;
+    private LinearLayout historySection;
+    private LinearLayout historyContainer;
     private LinearLayout summaryFindingsContainer;
     private LinearLayout reportSectionsContainer;
     private LinearLayout removalThreatsContainer;
 
     private ActivityResultLauncher<String[]> permissionLauncher;
     private ActivityResultLauncher<Intent> usageAccessLauncher;
-    private ActivityResultLauncher<Intent> uninstallLauncher;
+    private ActivityResultLauncher<Intent> remediationLauncher;
 
     private boolean pendingScanRequest;
     private boolean scanInProgress;
+    private boolean highContrastMode;
+    private boolean reducedMotionMode;
+    private List<ScanHistoryEntry> scanHistory = new ArrayList<>();
     private List<ScanSection> lastSections = new ArrayList<>();
     private List<ThreatFinding> lastThreats = new ArrayList<>();
 
@@ -190,17 +221,20 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         setContentView(R.layout.activity_main);
         bindViews();
         setupWindowInsets();
         registerLaunchers();
         setupActions();
-        showHomeScreen();
+        setupAccessibility();
+        restorePersistedState();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        refreshAccessibilityState();
         if (pendingScanRequest && !scanInProgress && hasUsageStatsAccess()) {
             startScan();
         }
@@ -215,6 +249,9 @@ public class MainActivity extends AppCompatActivity {
     private void bindViews() {
         homeScreen = findViewById(R.id.homeScreen);
         scanScreen = findViewById(R.id.scanScreen);
+        homeContent = findViewById(R.id.homeContent);
+        homeHeroCard = findViewById(R.id.homeHeroCard);
+        scanningPanel = findViewById(R.id.scanningPanel);
         summaryScreen = findViewById(R.id.summaryScreen);
         reportScreen = findViewById(R.id.reportScreen);
         removalScreen = findViewById(R.id.removalScreen);
@@ -230,13 +267,20 @@ public class MainActivity extends AppCompatActivity {
         reportPrimaryButton = findViewById(R.id.reportPrimaryButton);
         removeSelectedButton = findViewById(R.id.removeSelectedButton);
         removalBackButton = findViewById(R.id.removalBackButton);
+        homeTitle = findViewById(R.id.homeTitle);
+        scanTitle = findViewById(R.id.scanTitle);
+        reportTitle = findViewById(R.id.reportTitle);
+        removalTitle = findViewById(R.id.removalTitle);
         currentScanLabel = findViewById(R.id.currentScanLabel);
         scanCounter = findViewById(R.id.scanCounter);
         scanFootnote = findViewById(R.id.scanFootnote);
+        removalSelectionSummary = findViewById(R.id.removalSelectionSummary);
         linearProgress = findViewById(R.id.linearProgress);
         circularProgress = findViewById(R.id.circularProgress);
         summaryTitle = findViewById(R.id.summaryTitle);
         summaryBody = findViewById(R.id.summaryBody);
+        historySection = findViewById(R.id.historySection);
+        historyContainer = findViewById(R.id.historyContainer);
         summaryFindingsContainer = findViewById(R.id.summaryFindingsContainer);
         reportSectionsContainer = findViewById(R.id.reportSectionsContainer);
         removalThreatsContainer = findViewById(R.id.removalThreatsContainer);
@@ -265,9 +309,9 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
-        uninstallLauncher = registerForActivityResult(
+        remediationLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
-                result -> launchNextRemovalStep()
+                result -> launchNextRemediationStep()
         );
     }
 
@@ -281,7 +325,7 @@ public class MainActivity extends AppCompatActivity {
         startScanButton.setOnClickListener(v -> requestAccessAndStart());
         viewReportButton.setOnClickListener(v -> showDetailedReport());
         reportPrimaryButton.setOnClickListener(v -> {
-            if (!hasRemovableThreats()) {
+            if (!hasActionableThreats()) {
                 showHomeScreen();
             } else {
                 showRemovalScreen();
@@ -292,11 +336,53 @@ public class MainActivity extends AppCompatActivity {
         refreshLanguageSelectionState();
     }
 
+    private void setupAccessibility() {
+        refreshAccessibilityState();
+        languageToggleButton.setFocusable(true);
+        currentScanLabel.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        scanCounter.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        summaryTitle.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        removalSelectionSummary.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        ViewCompat.setAccessibilityHeading(homeTitle, true);
+        ViewCompat.setAccessibilityHeading(scanTitle, true);
+        ViewCompat.setAccessibilityHeading(summaryTitle, true);
+        ViewCompat.setAccessibilityHeading(reportTitle, true);
+        ViewCompat.setAccessibilityHeading(removalTitle, true);
+        updateLanguageToggleDescription(languageDropdown.getVisibility() == View.VISIBLE);
+        updateRemovalSelectionSummary(false);
+    }
+
+    private void refreshAccessibilityState() {
+        boolean newHighContrast = isHighContrastEnabled();
+        boolean newReducedMotion = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? !ValueAnimator.areAnimatorsEnabled()
+                : false;
+        boolean needsRefresh = newHighContrast != highContrastMode || newReducedMotion != reducedMotionMode;
+        highContrastMode = newHighContrast;
+        reducedMotionMode = newReducedMotion;
+        if (needsRefresh) {
+            applyAccessibilityVisualMode();
+            renderHistorySection();
+            if (!lastSections.isEmpty()) {
+                renderSummary(lastThreats);
+                renderDetailedReport(lastSections, lastThreats);
+                renderRemovalList();
+            }
+        } else {
+            applyAccessibilityVisualMode();
+        }
+    }
+
     private void toggleLanguageDropdown() {
         if (homeScreen.getVisibility() != View.VISIBLE) {
             return;
         }
-        languageDropdown.setVisibility(languageDropdown.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        boolean expanded = languageDropdown.getVisibility() != View.VISIBLE;
+        languageDropdown.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        updateLanguageToggleDescription(expanded);
+        announceForAccessibility(expanded
+                ? getString(R.string.a11y_language_menu_expanded)
+                : getString(R.string.a11y_language_menu_collapsed));
     }
 
     private void selectLanguage(@NonNull String languageCode) {
@@ -423,6 +509,14 @@ public class MainActivity extends AppCompatActivity {
 
         updateScanProgress(13, totalSteps, getString(R.string.section_storage));
         sections.add(runSectionSafely(getString(R.string.section_storage), getString(R.string.summary_section_storage_degraded), this::scanReachableStorageSurfaces));
+        SystemClock.sleep(320);
+
+        updateScanProgress(14, totalSteps, getString(R.string.section_sensitive_services));
+        sections.add(runSectionSafely(getString(R.string.section_sensitive_services), getString(R.string.summary_section_sensitive_services_degraded), this::scanSensitiveServiceRisk));
+        SystemClock.sleep(320);
+
+        updateScanProgress(15, totalSteps, getString(R.string.section_exposed_components));
+        sections.add(runSectionSafely(getString(R.string.section_exposed_components), getString(R.string.summary_section_exposed_components_degraded), this::scanExposedComponentRisk));
         SystemClock.sleep(380);
 
         return sections;
@@ -431,10 +525,11 @@ public class MainActivity extends AppCompatActivity {
     private void updateScanProgress(int step, int totalSteps, @NonNull String label) {
         mainHandler.post(() -> {
             currentScanLabel.setText(getString(R.string.currently_scanning_prefix) + " " + label);
-            scanCounter.setText(step + " / " + totalSteps);
+            scanCounter.setText(getString(R.string.scan_counter_value, step, totalSteps));
             linearProgress.setMax(totalSteps);
-            linearProgress.setProgressCompat(step, true);
+            linearProgress.setProgressCompat(step, !reducedMotionMode);
             scanFootnote.setText(R.string.scan_footer);
+            announceForAccessibility(getString(R.string.a11y_scan_step_announcement, label, step, totalSteps));
         });
     }
 
@@ -442,9 +537,12 @@ public class MainActivity extends AppCompatActivity {
         scanInProgress = false;
         lastSections = sections;
         lastThreats = threats;
+        appendScanToHistory(sections);
         renderSummary(threats);
         renderDetailedReport(sections, threats);
         renderRemovalList();
+        renderHistorySection();
+        persistActiveSnapshot(SCREEN_SUMMARY);
         showSummaryScreen(!threats.isEmpty());
     }
 
@@ -654,7 +752,7 @@ public class MainActivity extends AppCompatActivity {
                 ));
             }
         } catch (Exception e) {
-            Log.w(TAG, "Private DNS check failed", e);
+            logWarn("Private DNS check failed", e);
         }
 
         try {
@@ -674,7 +772,7 @@ public class MainActivity extends AppCompatActivity {
                 ));
             }
         } catch (Exception e) {
-            Log.w(TAG, "User CA scan failed", e);
+            logWarn("User CA scan failed", e);
         }
 
         try {
@@ -694,7 +792,7 @@ public class MainActivity extends AppCompatActivity {
                 ));
             }
         } catch (Exception e) {
-            Log.w(TAG, "Proxy check failed", e);
+            logWarn("Proxy check failed", e);
         }
 
         try {
@@ -726,7 +824,7 @@ public class MainActivity extends AppCompatActivity {
                 ));
             }
         } catch (Exception e) {
-            Log.w(TAG, "VPN check failed", e);
+            logWarn("VPN check failed", e);
         }
 
         return new ScanSection(getString(R.string.section_network), getString(R.string.summary_network), findings);
@@ -740,7 +838,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             return supplier.get();
         } catch (Throwable throwable) {
-            Log.e(TAG, "Scan section failed: " + title, throwable);
+            logError("Scan section failed: " + title, throwable);
             List<ThreatFinding> findings = new ArrayList<>();
             findings.add(new ThreatFinding(
                     title + " unavailable",
@@ -1233,6 +1331,185 @@ public class MainActivity extends AppCompatActivity {
         return new ScanSection(getString(R.string.section_storage), summary, findings);
     }
 
+    private ScanSection scanSensitiveServiceRisk() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        int reviewed = 0;
+
+        for (ApplicationInfo appInfo : getInstalledApplicationsCompat()) {
+            if (!isScannableUserApp(appInfo)) {
+                continue;
+            }
+            reviewed++;
+            try {
+                PackageInfo packageInfo = getPackageInfoCompat(
+                        appInfo.packageName,
+                        PackageManager.GET_PERMISSIONS | PackageManager.GET_SERVICES | PackageManager.GET_RECEIVERS
+                );
+                List<String> requested = getRequestedPermissions(packageInfo);
+                List<String> roles = collectSensitiveServiceRoles(packageInfo);
+                if (roles.isEmpty()) {
+                    continue;
+                }
+
+                String installer = getInstallerPackage(appInfo.packageName);
+                boolean suspiciousInstaller = TextUtils.isEmpty(installer) || installer.toLowerCase(Locale.US).contains("unknown");
+                boolean overlay = requested.contains("android.permission.SYSTEM_ALERT_WINDOW");
+                boolean accessibility = requested.contains("android.permission.BIND_ACCESSIBILITY_SERVICE");
+                boolean bootPersistence = hasBootPersistenceReceiver(packageInfo, requested);
+                int highRisk = countHighRiskPermissions(requested);
+
+                int riskSignals = 0;
+                if (roles.size() >= 2) {
+                    riskSignals++;
+                }
+                if (suspiciousInstaller) {
+                    riskSignals++;
+                }
+                if (overlay) {
+                    riskSignals++;
+                }
+                if (accessibility) {
+                    riskSignals++;
+                }
+                if (bootPersistence) {
+                    riskSignals++;
+                }
+                if (highRisk >= 3) {
+                    riskSignals++;
+                }
+                if (containsSuspiciousKeyword(appInfo.packageName)
+                        || containsSuspiciousKeyword(packageManager.getApplicationLabel(appInfo).toString())) {
+                    riskSignals++;
+                }
+
+                if (riskSignals < 2) {
+                    continue;
+                }
+
+                List<String> reasons = new ArrayList<>(roles);
+                if (suspiciousInstaller) {
+                    reasons.add(getString(R.string.reason_unknown_installer));
+                }
+                if (overlay) {
+                    reasons.add(getString(R.string.reason_overlay));
+                }
+                if (accessibility) {
+                    reasons.add(getString(R.string.reason_accessibility_on));
+                }
+                if (bootPersistence) {
+                    reasons.add(getString(R.string.reason_boot_start));
+                }
+                if (highRisk >= 3) {
+                    reasons.add(getString(R.string.reason_high_risk_permissions));
+                }
+
+                findings.add(new ThreatFinding(
+                        packageManager.getApplicationLabel(appInfo).toString(),
+                        getString(R.string.finding_sensitive_service_body),
+                        getString(R.string.attack_type_sensitive_service),
+                        appInfo.packageName,
+                        TextUtils.join(", ", reasons),
+                        getString(R.string.hint_review_sensitive_service_app),
+                        appInfo.packageName,
+                        packageManager.getApplicationIcon(appInfo),
+                        true,
+                        true
+                ));
+            } catch (Exception ignored) {
+                // Ignore packages with incomplete service metadata.
+            }
+        }
+
+        return new ScanSection(
+                getString(R.string.section_sensitive_services),
+                getString(R.string.summary_sensitive_services, reviewed),
+                findings
+        );
+    }
+
+    private ScanSection scanExposedComponentRisk() {
+        PackageManager packageManager = getPackageManager();
+        List<ThreatFinding> findings = new ArrayList<>();
+        int reviewed = 0;
+
+        for (ApplicationInfo appInfo : getInstalledApplicationsCompat()) {
+            if (!isScannableUserApp(appInfo)) {
+                continue;
+            }
+            reviewed++;
+            try {
+                PackageInfo packageInfo = getPackageInfoCompat(
+                        appInfo.packageName,
+                        PackageManager.GET_PERMISSIONS
+                                | PackageManager.GET_ACTIVITIES
+                                | PackageManager.GET_SERVICES
+                                | PackageManager.GET_RECEIVERS
+                                | PackageManager.GET_PROVIDERS
+                );
+                List<String> requested = getRequestedPermissions(packageInfo);
+                int exportedCount = countExportedComponents(packageInfo.activities)
+                        + countExportedComponents(packageInfo.services)
+                        + countExportedComponents(packageInfo.receivers)
+                        + countExportedComponents(packageInfo.providers);
+                int openCount = countUnprotectedExportedComponents(packageInfo.activities)
+                        + countUnprotectedExportedComponents(packageInfo.services)
+                        + countUnprotectedExportedComponents(packageInfo.receivers)
+                        + countUnprotectedExportedComponents(packageInfo.providers);
+
+                boolean overlay = requested.contains("android.permission.SYSTEM_ALERT_WINDOW");
+                boolean queryAll = requested.contains(Manifest.permission.QUERY_ALL_PACKAGES);
+                boolean bootPersistence = hasBootPersistenceReceiver(packageInfo, requested);
+                int highRisk = countHighRiskPermissions(requested);
+
+                int riskSignals = 0;
+                if (exportedCount >= 8) {
+                    riskSignals++;
+                }
+                if (openCount >= 4) {
+                    riskSignals++;
+                }
+                if (overlay) {
+                    riskSignals++;
+                }
+                if (queryAll) {
+                    riskSignals++;
+                }
+                if (bootPersistence) {
+                    riskSignals++;
+                }
+                if (highRisk >= 3) {
+                    riskSignals++;
+                }
+
+                if (riskSignals < 3) {
+                    continue;
+                }
+
+                findings.add(new ThreatFinding(
+                        packageManager.getApplicationLabel(appInfo).toString(),
+                        getString(R.string.finding_exposed_components_body),
+                        getString(R.string.attack_type_component_surface),
+                        appInfo.packageName,
+                        getString(R.string.detail_exposed_components, exportedCount, openCount),
+                        getString(R.string.hint_review_exposed_components_app),
+                        appInfo.packageName,
+                        packageManager.getApplicationIcon(appInfo),
+                        true,
+                        true
+                ));
+            } catch (Exception ignored) {
+                // Ignore packages with restricted component metadata.
+            }
+        }
+
+        return new ScanSection(
+                getString(R.string.section_exposed_components),
+                getString(R.string.summary_exposed_components, reviewed),
+                findings
+        );
+    }
+
     private int inspectDirectory(@NonNull File directory, @NonNull List<ThreatFinding> findings, int depth) {
         if (depth < 0) {
             return 0;
@@ -1320,6 +1597,98 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return inspected;
+    }
+
+    @NonNull
+    private List<String> collectSensitiveServiceRoles(@NonNull PackageInfo packageInfo) {
+        Set<String> roles = new LinkedHashSet<>();
+
+        if (packageInfo.services != null) {
+            for (android.content.pm.ServiceInfo serviceInfo : packageInfo.services) {
+                String permission = serviceInfo.permission;
+                String label = getSensitiveServiceLabel(permission);
+                if (label != null) {
+                    roles.add(label);
+                }
+            }
+        }
+
+        if (packageInfo.receivers != null) {
+            for (android.content.pm.ActivityInfo receiverInfo : packageInfo.receivers) {
+                if ("android.permission.BIND_DEVICE_ADMIN".equals(receiverInfo.permission)) {
+                    roles.add(getString(R.string.role_device_admin));
+                }
+            }
+        }
+
+        return new ArrayList<>(roles);
+    }
+
+    @Nullable
+    private String getSensitiveServiceLabel(@Nullable String permission) {
+        if (TextUtils.isEmpty(permission)) {
+            return null;
+        }
+        if ("android.permission.BIND_ACCESSIBILITY_SERVICE".equals(permission)) {
+            return getString(R.string.role_accessibility_service);
+        }
+        if ("android.permission.BIND_NOTIFICATION_LISTENER_SERVICE".equals(permission)) {
+            return getString(R.string.role_notification_listener);
+        }
+        if ("android.permission.BIND_AUTOFILL_SERVICE".equals(permission)) {
+            return getString(R.string.role_autofill_service);
+        }
+        if ("android.permission.BIND_INPUT_METHOD".equals(permission)) {
+            return getString(R.string.role_input_method);
+        }
+        if ("android.permission.BIND_VPN_SERVICE".equals(permission)) {
+            return getString(R.string.role_vpn_service);
+        }
+        return null;
+    }
+
+    private int countExportedComponents(@Nullable ComponentInfo[] components) {
+        if (components == null) {
+            return 0;
+        }
+        int count = 0;
+        for (ComponentInfo component : components) {
+            if (component != null && component.exported) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int countUnprotectedExportedComponents(@Nullable ComponentInfo[] components) {
+        if (components == null) {
+            return 0;
+        }
+        int count = 0;
+        for (ComponentInfo component : components) {
+            if (component != null && component.exported && TextUtils.isEmpty(getComponentPermission(component))) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    @Nullable
+    private String getComponentPermission(@NonNull ComponentInfo component) {
+        if (component instanceof android.content.pm.ActivityInfo) {
+            return ((android.content.pm.ActivityInfo) component).permission;
+        }
+        if (component instanceof android.content.pm.ServiceInfo) {
+            return ((android.content.pm.ServiceInfo) component).permission;
+        }
+        if (component instanceof android.content.pm.ProviderInfo) {
+            android.content.pm.ProviderInfo providerInfo = (android.content.pm.ProviderInfo) component;
+            if (!TextUtils.isEmpty(providerInfo.readPermission)) {
+                return providerInfo.readPermission;
+            }
+            return providerInfo.writePermission;
+        }
+        return null;
     }
 
     private List<ApplicationInfo> getInstalledApplicationsCompat() {
@@ -1828,6 +2197,7 @@ public class MainActivity extends AppCompatActivity {
         summaryScreen.setBackgroundResource(hasThreats ? R.drawable.bg_summary_danger : R.drawable.bg_summary_safe);
         summaryTitle.setText(hasThreats ? R.string.summary_danger_title : R.string.summary_safe_title);
         summaryBody.setText(hasThreats ? R.string.summary_danger_body : R.string.summary_safe_body);
+        summaryTitle.setContentDescription(summaryTitle.getText());
         summaryFindingsContainer.removeAllViews();
 
         if (!hasThreats) {
@@ -1851,25 +2221,28 @@ public class MainActivity extends AppCompatActivity {
         for (ScanSection section : sections) {
             reportSectionsContainer.addView(createSectionCard(section));
         }
-        reportPrimaryButton.setText(hasRemovableThreats(threats) ? R.string.remove_malware : R.string.go_home);
+        reportPrimaryButton.setText(hasActionableThreats(threats) ? R.string.remove_malware : R.string.go_home);
     }
 
     private void renderRemovalList() {
         removalThreatsContainer.removeAllViews();
         for (ThreatFinding threat : lastThreats) {
-            if (!threat.removable) {
+            if (!isThreatActionable(threat)) {
                 continue;
             }
             removalThreatsContainer.addView(createRemovalOption(threat));
         }
+        removeSelectedButton.setText(R.string.apply_selected_actions);
         removeSelectedButton.setEnabled(hasSelectedThreats());
         removeSelectedButton.setAlpha(hasSelectedThreats() ? 1f : 0.55f);
+        updateRemovalSelectionSummary(false);
     }
 
     private View createSectionCard(@NonNull ScanSection section) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackgroundResource(R.drawable.bg_glass_panel);
+        card.setBackgroundResource(getPanelBackgroundRes());
+        card.setFocusable(true);
         card.setPadding(dp(18), dp(18), dp(18), dp(18));
 
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
@@ -1879,14 +2252,15 @@ public class MainActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setText(section.title);
-        title.setTextColor(ContextCompat.getColor(this, R.color.ink_primary));
+        title.setTextColor(getPrimaryTextColor());
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         title.setTypeface(Typeface.DEFAULT_BOLD);
+        ViewCompat.setAccessibilityHeading(title, true);
         card.addView(title);
 
         TextView subtitle = new TextView(this);
         subtitle.setText(section.summary);
-        subtitle.setTextColor(ContextCompat.getColor(this, R.color.ink_secondary));
+        subtitle.setTextColor(getSecondaryTextColor());
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1896,8 +2270,8 @@ public class MainActivity extends AppCompatActivity {
 
         TextView status = new TextView(this);
         status.setText(section.findings.isEmpty() ? getString(R.string.status_clean) : getString(R.string.status_warning));
-        status.setTextColor(ContextCompat.getColor(this, R.color.ink_primary));
-        status.setBackgroundResource(section.findings.isEmpty() ? R.drawable.bg_status_safe : R.drawable.bg_status_danger);
+        status.setTextColor(getPrimaryTextColor());
+        status.setBackgroundResource(getStatusBackgroundRes(section.findings.isEmpty()));
         status.setPadding(dp(12), dp(8), dp(12), dp(8));
         LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1908,25 +2282,28 @@ public class MainActivity extends AppCompatActivity {
         if (section.findings.isEmpty()) {
             TextView clean = new TextView(this);
             clean.setText(R.string.section_clear);
-            clean.setTextColor(ContextCompat.getColor(this, R.color.ink_secondary));
+            clean.setTextColor(getSecondaryTextColor());
             LinearLayout.LayoutParams cleanParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             cleanParams.topMargin = dp(14);
             clean.setLayoutParams(cleanParams);
             card.addView(clean);
+            card.setContentDescription(section.title + ". " + section.summary + ". " + getString(R.string.section_clear));
             return card;
         }
 
         for (ThreatFinding finding : section.findings) {
             card.addView(createFindingRow(finding));
         }
+        card.setContentDescription(getString(R.string.a11y_section_summary, section.title, section.summary, section.findings.size()));
         return card;
     }
 
     private View createFindingRow(@NonNull ThreatFinding finding) {
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setBackgroundResource(R.drawable.bg_inner_glass);
+        container.setBackgroundResource(getInnerBackgroundRes());
+        container.setFocusable(true);
         container.setPadding(dp(14), dp(14), dp(14), dp(14));
 
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -1942,6 +2319,7 @@ public class MainActivity extends AppCompatActivity {
         if (finding.showAppIcon && finding.icon != null) {
             ImageView iconView = new ImageView(this);
             iconView.setImageDrawable(finding.icon);
+            iconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(26), dp(26));
             iconParams.rightMargin = dp(10);
             iconView.setLayoutParams(iconParams);
@@ -1950,7 +2328,7 @@ public class MainActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setText(finding.title);
-        title.setTextColor(ContextCompat.getColor(this, R.color.ink_primary));
+        title.setTextColor(getPrimaryTextColor());
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
@@ -1960,7 +2338,7 @@ public class MainActivity extends AppCompatActivity {
 
         TextView body = new TextView(this);
         body.setText(finding.description);
-        body.setTextColor(ContextCompat.getColor(this, R.color.ink_secondary));
+        body.setTextColor(getSecondaryTextColor());
         body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1971,23 +2349,34 @@ public class MainActivity extends AppCompatActivity {
         MaterialButton detailsButton = new MaterialButton(this, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         detailsButton.setText(R.string.details);
-        detailsButton.setTextColor(ContextCompat.getColor(this, R.color.ink_primary));
+        detailsButton.setTextColor(getPrimaryTextColor());
         detailsButton.setStrokeColor(ContextCompat.getColorStateList(this, R.color.glass_stroke));
+        detailsButton.setMinHeight(dp(48));
+        detailsButton.setContentDescription(getString(R.string.a11y_details_for, finding.title));
         detailsButton.setOnClickListener(v -> showThreatDetails(finding));
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         buttonParams.topMargin = dp(10);
         detailsButton.setLayoutParams(buttonParams);
         container.addView(detailsButton);
+        container.setContentDescription(getString(
+                R.string.a11y_finding_item,
+                finding.title,
+                finding.attackType,
+                finding.description));
 
         return container;
     }
 
     private View createRemovalOption(@NonNull ThreatFinding threat) {
+        RemediationAction action = buildRemediationAction(threat);
+
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setBackgroundResource(R.drawable.bg_glass_panel);
+        card.setBackgroundResource(getPanelBackgroundRes());
+        card.setFocusable(true);
+        card.setClickable(true);
         card.setPadding(dp(14), dp(14), dp(14), dp(14));
 
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
@@ -1997,16 +2386,21 @@ public class MainActivity extends AppCompatActivity {
 
         CheckBox checkBox = new CheckBox(this);
         checkBox.setChecked(threat.selectedForRemoval);
+        checkBox.setMinHeight(dp(48));
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             threat.selectedForRemoval = isChecked;
             removeSelectedButton.setEnabled(hasSelectedThreats());
             removeSelectedButton.setAlpha(hasSelectedThreats() ? 1f : 0.55f);
+            updateRemovalSelectionSummary(true);
+            updateRemovalCardDescription(card, threat);
+            persistActiveSnapshot(SCREEN_REMOVAL);
         });
         card.addView(checkBox);
 
         if (threat.icon != null) {
             ImageView iconView = new ImageView(this);
             iconView.setImageDrawable(threat.icon);
+            iconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(28), dp(28));
             iconParams.rightMargin = dp(12);
             iconView.setLayoutParams(iconParams);
@@ -2021,21 +2415,23 @@ public class MainActivity extends AppCompatActivity {
         card.addView(textWrap);
 
         TextView title = new TextView(this);
-        title.setText(threat.title);
-        title.setTextColor(ContextCompat.getColor(this, R.color.ink_primary));
+        title.setText(getRemovalPrimaryLabel(threat));
+        title.setTextColor(getPrimaryTextColor());
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         textWrap.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText(threat.attackType);
-        subtitle.setTextColor(ContextCompat.getColor(this, R.color.ink_secondary));
+        subtitle.setText(getRemovalSecondaryLabel(threat, action));
+        subtitle.setTextColor(getSecondaryTextColor());
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         subParams.topMargin = dp(4);
         subtitle.setLayoutParams(subParams);
         textWrap.addView(subtitle);
+        card.setOnClickListener(v -> checkBox.toggle());
+        updateRemovalCardDescription(card, threat);
 
         return card;
     }
@@ -2043,8 +2439,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView createSummaryPill(@NonNull String text) {
         TextView pill = new TextView(this);
         pill.setText(text);
-        pill.setTextColor(ContextCompat.getColor(this, R.color.ink_primary));
-        pill.setBackgroundResource(R.drawable.bg_chip);
+        pill.setTextColor(getPrimaryTextColor());
+        pill.setBackgroundResource(getChipBackgroundRes());
         pill.setPadding(dp(16), dp(12), dp(16), dp(12));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2055,6 +2451,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showThreatDetails(@NonNull ThreatFinding finding) {
         StringBuilder message = new StringBuilder();
+        message.append(finding.description).append("\n\n");
         message.append(getString(R.string.details_attack)).append(" ").append(finding.attackType).append("\n\n");
         message.append(getString(R.string.details_location)).append(" ").append(finding.location).append("\n\n");
         message.append(getString(R.string.details_reason)).append(" ").append(finding.whyFlagged);
@@ -2076,6 +2473,10 @@ public class MainActivity extends AppCompatActivity {
         reportScreen.setVisibility(View.GONE);
         removalScreen.setVisibility(View.GONE);
         languageDropdown.setVisibility(View.GONE);
+        updateLanguageToggleDescription(false);
+        renderHistorySection();
+        persistScreenState(SCREEN_HOME);
+        focusAndAnnounce(homeTitle, getString(R.string.a11y_home_opened));
     }
 
     private void showScanScreen() {
@@ -2089,6 +2490,7 @@ public class MainActivity extends AppCompatActivity {
         linearProgress.setProgressCompat(0, false);
         scanCounter.setText(getString(R.string.scan_counter_value, 0, TOTAL_SCAN_STEPS));
         currentScanLabel.setText(R.string.preparing_scan);
+        focusAndAnnounce(scanTitle, getString(R.string.scan_progress_label));
     }
 
     private void showSummaryScreen(boolean danger) {
@@ -2102,6 +2504,10 @@ public class MainActivity extends AppCompatActivity {
         summaryBody.setTextColor(ContextCompat.getColor(this, R.color.summary_text));
         summaryTitle.setTextColor(ContextCompat.getColor(this, R.color.summary_text));
         summaryFindingsContainer.setAlpha(danger ? 1f : 0.9f);
+        persistActiveSnapshot(SCREEN_SUMMARY);
+        focusAndAnnounce(summaryTitle, getString(danger
+                ? R.string.a11y_scan_complete_danger
+                : R.string.a11y_scan_complete_safe));
     }
 
     private void showDetailedReport() {
@@ -2112,6 +2518,8 @@ public class MainActivity extends AppCompatActivity {
         removalScreen.setVisibility(View.GONE);
         languageDropdown.setVisibility(View.GONE);
         reportScreen.fullScroll(View.FOCUS_UP);
+        persistActiveSnapshot(SCREEN_REPORT);
+        focusAndAnnounce(reportTitle, getString(R.string.a11y_report_opened));
     }
 
     private void showRemovalScreen() {
@@ -2123,6 +2531,8 @@ public class MainActivity extends AppCompatActivity {
         languageDropdown.setVisibility(View.GONE);
         renderRemovalList();
         removalScreen.fullScroll(View.FOCUS_UP);
+        persistActiveSnapshot(SCREEN_REMOVAL);
+        focusAndAnnounce(removalTitle, getString(R.string.a11y_removal_opened));
     }
 
     private void startRemovalFlow() {
@@ -2130,37 +2540,53 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        removalQueue.clear();
-        Set<String> queuedPackages = new LinkedHashSet<>();
+        persistActiveSnapshot(SCREEN_REMOVAL);
+
+        remediationQueue.clear();
+        Set<String> queuedActions = new LinkedHashSet<>();
         for (ThreatFinding threat : lastThreats) {
-            if (threat.removable && threat.selectedForRemoval && threat.removablePackage != null
-                    && queuedPackages.add(threat.removablePackage)) {
-                removalQueue.add(threat.removablePackage);
+            if (!isThreatActionable(threat) || !threat.selectedForRemoval) {
+                continue;
+            }
+            RemediationAction action = buildRemediationAction(threat);
+            if (action.type == RemediationActionType.NONE) {
+                continue;
+            }
+            if (queuedActions.add(action.uniqueKey)) {
+                remediationQueue.add(action);
             }
         }
-        launchNextRemovalStep();
+        launchNextRemediationStep();
     }
 
-    private void launchNextRemovalStep() {
-        String nextPackage = removalQueue.poll();
-        if (nextPackage == null) {
+    private void launchNextRemediationStep() {
+        RemediationAction nextAction = remediationQueue.poll();
+        if (nextAction == null) {
             showHomeScreen();
             return;
         }
 
-        Intent uninstallIntent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
-        uninstallIntent.setData(Uri.parse("package:" + nextPackage));
-        uninstallIntent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-        uninstallLauncher.launch(uninstallIntent);
+        Intent intent = buildRemediationIntent(nextAction);
+        if (intent == null || !canResolveIntent(intent)) {
+            announceForAccessibility(getString(R.string.action_unavailable));
+            launchNextRemediationStep();
+            return;
+        }
+        try {
+            remediationLauncher.launch(intent);
+        } catch (ActivityNotFoundException ignored) {
+            announceForAccessibility(getString(R.string.action_unavailable));
+            launchNextRemediationStep();
+        }
     }
 
-    private boolean hasRemovableThreats() {
-        return hasRemovableThreats(lastThreats);
+    private boolean hasActionableThreats() {
+        return hasActionableThreats(lastThreats);
     }
 
-    private boolean hasRemovableThreats(@NonNull List<ThreatFinding> threats) {
+    private boolean hasActionableThreats(@NonNull List<ThreatFinding> threats) {
         for (ThreatFinding threat : threats) {
-            if (threat.removable && threat.removablePackage != null) {
+            if (isThreatActionable(threat)) {
                 return true;
             }
         }
@@ -2169,11 +2595,771 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean hasSelectedThreats() {
         for (ThreatFinding threat : lastThreats) {
-            if (threat.removable && threat.selectedForRemoval && threat.removablePackage != null) {
+            if (isThreatActionable(threat) && threat.selectedForRemoval) {
                 return true;
             }
         }
         return false;
+    }
+
+    private void updateRemovalSelectionSummary(boolean announce) {
+        int selectedCount = 0;
+        for (ThreatFinding threat : lastThreats) {
+            if (isThreatActionable(threat) && threat.selectedForRemoval) {
+                selectedCount++;
+            }
+        }
+        String summary = selectedCount == 0
+                ? getString(R.string.a11y_no_selected_threats)
+                : getString(R.string.a11y_selected_threats, selectedCount);
+        removalSelectionSummary.setText(summary);
+        if (announce) {
+            announceForAccessibility(summary);
+        }
+    }
+
+    private void updateLanguageToggleDescription(boolean expanded) {
+        languageToggleButton.setContentDescription(getString(
+                expanded ? R.string.a11y_language_menu_expanded : R.string.a11y_language_menu_collapsed));
+    }
+
+    private void updateRemovalCardDescription(@NonNull View card, @NonNull ThreatFinding threat) {
+        RemediationAction action = buildRemediationAction(threat);
+        card.setContentDescription(getString(
+                R.string.a11y_removal_item,
+                getRemovalPrimaryLabel(threat),
+                getRemovalSecondaryLabel(threat, action),
+                getString(threat.selectedForRemoval ? R.string.a11y_selected_yes : R.string.a11y_selected_no)));
+    }
+
+    @NonNull
+    private String getRemovalPrimaryLabel(@NonNull ThreatFinding threat) {
+        if (threat.showAppIcon && !TextUtils.isEmpty(threat.attackType)) {
+            return threat.attackType;
+        }
+        return threat.title;
+    }
+
+    @NonNull
+    private String getRemovalSecondaryLabel(@NonNull ThreatFinding threat, @NonNull RemediationAction action) {
+        String actionLabel = getRecommendedActionLabel(action.type);
+        if (threat.showAppIcon && !TextUtils.isEmpty(threat.title)) {
+            return threat.title + " | " + actionLabel;
+        }
+        return actionLabel;
+    }
+
+    private void restorePersistedState() {
+        scanHistory = readHistoryFromPrefs();
+        renderHistorySection();
+
+        ScanHistoryEntry activeEntry = readActiveScanFromPrefs();
+        if (activeEntry == null || activeEntry.sections.isEmpty()) {
+            showHomeScreen();
+            return;
+        }
+
+        lastSections = deepCopySections(activeEntry.sections);
+        lastThreats = flattenFindings(lastSections);
+        renderSummary(lastThreats);
+        renderDetailedReport(lastSections, lastThreats);
+        renderRemovalList();
+
+        String activeScreen = getPreferences().getString(KEY_ACTIVE_SCREEN, SCREEN_HOME);
+        if (SCREEN_SUMMARY.equals(activeScreen)) {
+            showSummaryScreen(!lastThreats.isEmpty());
+        } else if (SCREEN_REPORT.equals(activeScreen)) {
+            showDetailedReport();
+        } else if (SCREEN_REMOVAL.equals(activeScreen)) {
+            showRemovalScreen();
+        } else {
+            showHomeScreen();
+        }
+    }
+
+    private void renderHistorySection() {
+        historyContainer.removeAllViews();
+        if (scanHistory.isEmpty()) {
+            historySection.setVisibility(View.GONE);
+            updateHomeLayoutForHistory(false);
+            return;
+        }
+
+        historySection.setVisibility(View.VISIBLE);
+        updateHomeLayoutForHistory(true);
+        for (ScanHistoryEntry entry : scanHistory) {
+            historyContainer.addView(createHistoryCard(entry));
+        }
+    }
+
+    private void updateHomeLayoutForHistory(boolean hasHistory) {
+        ViewGroup.LayoutParams layoutParams = homeContent.getLayoutParams();
+        layoutParams.height = hasHistory ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT;
+        homeContent.setLayoutParams(layoutParams);
+        homeContent.setGravity(hasHistory ? Gravity.TOP | Gravity.CENTER_HORIZONTAL : Gravity.CENTER);
+    }
+
+    @NonNull
+    private View createHistoryCard(@NonNull ScanHistoryEntry entry) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(getInnerBackgroundRes());
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setPadding(dp(14), dp(14), dp(14), dp(14));
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.bottomMargin = dp(10);
+        card.setLayoutParams(params);
+
+        TextView title = new TextView(this);
+        title.setText(formatHistoryTimestamp(entry.timestamp));
+        title.setTextColor(getPrimaryTextColor());
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(title);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText(getString(R.string.history_item_threats, flattenFindings(entry.sections).size()));
+        subtitle.setTextColor(getSecondaryTextColor());
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        subtitleParams.topMargin = dp(4);
+        subtitle.setLayoutParams(subtitleParams);
+        card.addView(subtitle);
+
+        String contentDescription = getString(
+                R.string.history_item_content_description,
+                title.getText(),
+                flattenFindings(entry.sections).size());
+        card.setContentDescription(contentDescription);
+        card.setOnClickListener(v -> openHistoryEntry(entry));
+        return card;
+    }
+
+    private void openHistoryEntry(@NonNull ScanHistoryEntry entry) {
+        lastSections = deepCopySections(entry.sections);
+        lastThreats = flattenFindings(lastSections);
+        renderSummary(lastThreats);
+        renderDetailedReport(lastSections, lastThreats);
+        renderRemovalList();
+        persistActiveSnapshot(SCREEN_REPORT);
+        showDetailedReport();
+    }
+
+    @NonNull
+    private String formatHistoryTimestamp(long timestamp) {
+        Locale locale = createLocale(getSelectedLanguage());
+        DateFormat formatter = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale);
+        return formatter.format(new Date(timestamp));
+    }
+
+    private void appendScanToHistory(@NonNull List<ScanSection> sections) {
+        List<ScanHistoryEntry> updated = new ArrayList<>();
+        updated.add(new ScanHistoryEntry(System.currentTimeMillis(), deepCopySections(sections)));
+        for (ScanHistoryEntry entry : scanHistory) {
+            if (updated.size() >= MAX_HISTORY_ENTRIES) {
+                break;
+            }
+            updated.add(entry);
+        }
+        scanHistory = updated;
+        persistHistory();
+    }
+
+    private void persistActiveSnapshot(@NonNull String screen) {
+        SharedPreferences.Editor editor = getPreferences().edit().putString(KEY_ACTIVE_SCREEN, screen);
+        if (lastSections.isEmpty()) {
+            editor.remove(KEY_ACTIVE_SCAN).apply();
+            return;
+        }
+        ScanHistoryEntry activeEntry = new ScanHistoryEntry(System.currentTimeMillis(), deepCopySections(lastSections));
+        editor.putString(KEY_ACTIVE_SCAN, serializeHistoryEntry(activeEntry).toString()).apply();
+    }
+
+    private void persistScreenState(@NonNull String screen) {
+        getPreferences().edit().putString(KEY_ACTIVE_SCREEN, screen).apply();
+    }
+
+    @NonNull
+    private SharedPreferences getPreferences() {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+    }
+
+    private void persistHistory() {
+        JSONArray array = new JSONArray();
+        for (ScanHistoryEntry entry : scanHistory) {
+            array.put(serializeHistoryEntry(entry));
+        }
+        getPreferences().edit().putString(KEY_SCAN_HISTORY, array.toString()).apply();
+    }
+
+    @NonNull
+    private List<ScanHistoryEntry> readHistoryFromPrefs() {
+        String raw = getPreferences().getString(KEY_SCAN_HISTORY, "");
+        if (TextUtils.isEmpty(raw)) {
+            return new ArrayList<>();
+        }
+
+        List<ScanHistoryEntry> entries = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(raw);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject object = array.optJSONObject(i);
+                if (object == null) {
+                    continue;
+                }
+                ScanHistoryEntry entry = deserializeHistoryEntry(object);
+                if (entry != null) {
+                    entries.add(entry);
+                }
+            }
+        } catch (JSONException e) {
+            logWarn("Failed to parse scan history", e);
+        }
+        return entries;
+    }
+
+    @Nullable
+    private ScanHistoryEntry readActiveScanFromPrefs() {
+        String raw = getPreferences().getString(KEY_ACTIVE_SCAN, "");
+        if (TextUtils.isEmpty(raw)) {
+            return null;
+        }
+        try {
+            return deserializeHistoryEntry(new JSONObject(raw));
+        } catch (JSONException e) {
+            logWarn("Failed to parse active scan", e);
+            return null;
+        }
+    }
+
+    @NonNull
+    private JSONObject serializeHistoryEntry(@NonNull ScanHistoryEntry entry) {
+        JSONObject object = new JSONObject();
+        try {
+            object.put("timestamp", entry.timestamp);
+            JSONArray sectionsArray = new JSONArray();
+            for (ScanSection section : entry.sections) {
+                JSONObject sectionObject = new JSONObject();
+                sectionObject.put("title", section.title);
+                sectionObject.put("summary", section.summary);
+                JSONArray findingArray = new JSONArray();
+                for (ThreatFinding finding : section.findings) {
+                    findingArray.put(serializeThreatFinding(finding));
+                }
+                sectionObject.put("findings", findingArray);
+                sectionsArray.put(sectionObject);
+            }
+            object.put("sections", sectionsArray);
+        } catch (JSONException e) {
+            logWarn("Failed to serialize history entry", e);
+        }
+        return object;
+    }
+
+    @Nullable
+    private ScanHistoryEntry deserializeHistoryEntry(@NonNull JSONObject object) {
+        JSONArray sectionsArray = object.optJSONArray("sections");
+        if (sectionsArray == null) {
+            return null;
+        }
+
+        List<ScanSection> sections = new ArrayList<>();
+        for (int i = 0; i < sectionsArray.length(); i++) {
+            JSONObject sectionObject = sectionsArray.optJSONObject(i);
+            if (sectionObject == null) {
+                continue;
+            }
+
+            List<ThreatFinding> findings = new ArrayList<>();
+            JSONArray findingArray = sectionObject.optJSONArray("findings");
+            if (findingArray != null) {
+                for (int j = 0; j < findingArray.length(); j++) {
+                    JSONObject findingObject = findingArray.optJSONObject(j);
+                    if (findingObject == null) {
+                        continue;
+                    }
+                    ThreatFinding finding = deserializeThreatFinding(findingObject);
+                    if (finding != null) {
+                        findings.add(finding);
+                    }
+                }
+            }
+
+            sections.add(new ScanSection(
+                    sectionObject.optString("title"),
+                    sectionObject.optString("summary"),
+                    findings
+            ));
+        }
+
+        return new ScanHistoryEntry(object.optLong("timestamp", System.currentTimeMillis()), sections);
+    }
+
+    @NonNull
+    private JSONObject serializeThreatFinding(@NonNull ThreatFinding finding) {
+        JSONObject object = new JSONObject();
+        try {
+            object.put("title", finding.title);
+            object.put("description", finding.description);
+            object.put("attackType", finding.attackType);
+            object.put("location", finding.location);
+            object.put("whyFlagged", getRawWhyFlagged(finding));
+            object.put("remediationHint", finding.remediationHint);
+            object.put("removablePackage", finding.removablePackage);
+            object.put("removable", finding.removable);
+            object.put("showAppIcon", finding.showAppIcon);
+            object.put("selectedForRemoval", finding.selectedForRemoval);
+        } catch (JSONException e) {
+            logWarn("Failed to serialize finding", e);
+        }
+        return object;
+    }
+
+    @Nullable
+    private ThreatFinding deserializeThreatFinding(@NonNull JSONObject object) {
+        String packageName = object.optString("removablePackage", "");
+        if (TextUtils.isEmpty(packageName)) {
+            packageName = null;
+        }
+        boolean showAppIcon = object.optBoolean("showAppIcon");
+        Drawable icon = showAppIcon ? resolveThreatIcon(packageName, object.optString("location")) : null;
+        ThreatFinding finding = new ThreatFinding(
+                object.optString("title"),
+                object.optString("description"),
+                object.optString("attackType"),
+                object.optString("location"),
+                object.optString("whyFlagged"),
+                object.optString("remediationHint"),
+                packageName,
+                icon,
+                object.optBoolean("removable"),
+                showAppIcon
+        );
+        finding.selectedForRemoval = object.optBoolean("selectedForRemoval", false);
+        return finding;
+    }
+
+    @NonNull
+    private String getRawWhyFlagged(@NonNull ThreatFinding finding) {
+        if (!TextUtils.isEmpty(finding.remediationHint)) {
+            String suffix = "\n" + finding.remediationHint;
+            if (finding.whyFlagged.endsWith(suffix)) {
+                return finding.whyFlagged.substring(0, finding.whyFlagged.length() - suffix.length());
+            }
+        }
+        return finding.whyFlagged;
+    }
+
+    @Nullable
+    private Drawable resolveThreatIcon(@Nullable String removablePackage, @Nullable String location) {
+        String packageName = !TextUtils.isEmpty(removablePackage) ? removablePackage : location;
+        if (!isValidPackageName(packageName)) {
+            return null;
+        }
+        try {
+            return getPackageManager().getApplicationIcon(packageName);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    @NonNull
+    private List<ScanSection> deepCopySections(@NonNull List<ScanSection> source) {
+        List<ScanSection> copy = new ArrayList<>();
+        for (ScanSection section : source) {
+            List<ThreatFinding> findings = new ArrayList<>();
+            for (ThreatFinding finding : section.findings) {
+                findings.add(copyThreatFinding(finding));
+            }
+            copy.add(new ScanSection(section.title, section.summary, findings));
+        }
+        return copy;
+    }
+
+    @NonNull
+    private ThreatFinding copyThreatFinding(@NonNull ThreatFinding source) {
+        ThreatFinding copy = new ThreatFinding(
+                source.title,
+                source.description,
+                source.attackType,
+                source.location,
+                getRawWhyFlagged(source),
+                source.remediationHint,
+                source.removablePackage,
+                source.icon,
+                source.removable,
+                source.showAppIcon
+        );
+        copy.selectedForRemoval = source.selectedForRemoval;
+        return copy;
+    }
+
+    private void focusAndAnnounce(@NonNull View view, @NonNull String announcement) {
+        view.post(() -> {
+            view.requestFocus();
+            announceForAccessibility(announcement);
+        });
+    }
+
+    private void announceForAccessibility(@NonNull String message) {
+        AccessibilityManager accessibilityManager =
+                (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+        if (accessibilityManager != null && accessibilityManager.isEnabled()) {
+            View root = findViewById(R.id.main);
+            if (root != null) {
+                root.announceForAccessibility(message);
+            }
+        }
+    }
+
+    private boolean isHighContrastEnabled() {
+        boolean systemHighContrast = false;
+        try {
+            systemHighContrast = Settings.Secure.getInt(
+                    getContentResolver(),
+                    "high_text_contrast_enabled",
+                    0
+            ) == 1;
+        } catch (Exception ignored) {
+            // Fall back to font scale heuristic below.
+        }
+        return systemHighContrast || getResources().getConfiguration().fontScale >= 1.3f;
+    }
+
+    private void applyAccessibilityVisualMode() {
+        homeHeroCard.setBackgroundResource(getHeroBackgroundRes());
+        languageToggleButton.setBackgroundResource(getPanelBackgroundRes());
+        languageDropdown.setBackgroundResource(getPanelBackgroundRes());
+        historySection.setBackgroundResource(getPanelBackgroundRes());
+        currentScanLabel.setBackgroundResource(getPanelBackgroundRes());
+        scanningPanel.setBackgroundResource(getScanPanelBackgroundRes());
+        startScanButton.setBackgroundResource(getButtonBackgroundRes());
+        viewReportButton.setBackgroundResource(getButtonBackgroundRes());
+        reportPrimaryButton.setBackgroundResource(getButtonBackgroundRes());
+        removeSelectedButton.setBackgroundResource(getButtonBackgroundRes());
+
+        homeTitle.setTextColor(getPrimaryTextColor());
+        scanTitle.setTextColor(getPrimaryTextColor());
+        reportTitle.setTextColor(getPrimaryTextColor());
+        removalTitle.setTextColor(getPrimaryTextColor());
+        currentScanLabel.setTextColor(getPrimaryTextColor());
+        scanCounter.setTextColor(getPrimaryTextColor());
+        scanFootnote.setTextColor(getSecondaryTextColor());
+        summaryBody.setTextColor(ContextCompat.getColor(this, R.color.summary_text));
+        removalSelectionSummary.setTextColor(getPrimaryTextColor());
+    }
+
+    private int getPrimaryTextColor() {
+        return ContextCompat.getColor(this, highContrastMode ? R.color.accessible_ink_primary : R.color.ink_primary);
+    }
+
+    private int getSecondaryTextColor() {
+        return ContextCompat.getColor(this, highContrastMode ? R.color.accessible_ink_secondary : R.color.ink_secondary);
+    }
+
+    private int getPanelBackgroundRes() {
+        return highContrastMode ? R.drawable.bg_glass_panel_accessible : R.drawable.bg_glass_panel;
+    }
+
+    private int getHeroBackgroundRes() {
+        return highContrastMode ? R.drawable.bg_glass_hero_accessible : R.drawable.bg_glass_hero;
+    }
+
+    private int getButtonBackgroundRes() {
+        return highContrastMode ? R.drawable.bg_glass_button_accessible : R.drawable.bg_glass_button;
+    }
+
+    private int getInnerBackgroundRes() {
+        return highContrastMode ? R.drawable.bg_inner_glass_accessible : R.drawable.bg_inner_glass;
+    }
+
+    private int getScanPanelBackgroundRes() {
+        return highContrastMode ? R.drawable.bg_scan_panel_accessible : R.drawable.bg_scan_panel;
+    }
+
+    private int getChipBackgroundRes() {
+        return highContrastMode ? R.drawable.bg_chip_accessible : R.drawable.bg_chip;
+    }
+
+    private int getStatusBackgroundRes(boolean clean) {
+        if (highContrastMode) {
+            return clean ? R.drawable.bg_status_safe_accessible : R.drawable.bg_status_danger_accessible;
+        }
+        return clean ? R.drawable.bg_status_safe : R.drawable.bg_status_danger;
+    }
+
+    private boolean isThreatActionable(@NonNull ThreatFinding threat) {
+        return buildRemediationAction(threat).type != RemediationActionType.NONE;
+    }
+
+    @NonNull
+    private RemediationAction buildRemediationAction(@NonNull ThreatFinding threat) {
+        String packageName = threat.removablePackage != null ? threat.removablePackage : threat.location;
+        String reasonText = threat.whyFlagged == null ? "" : threat.whyFlagged;
+
+        if (threat.attackType.equals(getString(R.string.attack_type_permissions))) {
+            return new RemediationAction(
+                    RemediationActionType.APP_SETTINGS,
+                    packageName,
+                    getString(R.string.action_open_app_settings),
+                    RemediationActionType.APP_SETTINGS.name() + ":" + packageName
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_install_trust))) {
+            if (!TextUtils.isEmpty(packageName) && packageName.contains(".")) {
+                return new RemediationAction(
+                        RemediationActionType.UNKNOWN_APP_SOURCES,
+                        packageName,
+                        getString(R.string.action_review_unknown_installs),
+                        RemediationActionType.UNKNOWN_APP_SOURCES.name() + ":" + packageName
+                );
+            }
+            return new RemediationAction(
+                    RemediationActionType.SECURITY_SETTINGS,
+                    "",
+                    getString(R.string.action_review_security_settings),
+                    RemediationActionType.SECURITY_SETTINGS.name()
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_default_handler))) {
+            return new RemediationAction(
+                    RemediationActionType.DEFAULT_APPS,
+                    packageName,
+                    getString(R.string.action_review_default_apps),
+                    RemediationActionType.DEFAULT_APPS.name()
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_persistence))) {
+            if (reasonText.contains(getString(R.string.reason_accessibility_on))) {
+                return new RemediationAction(
+                        RemediationActionType.ACCESSIBILITY_SETTINGS,
+                        packageName,
+                        getString(R.string.action_review_accessibility),
+                        RemediationActionType.ACCESSIBILITY_SETTINGS.name() + ":" + packageName
+                );
+            }
+            if (reasonText.contains(getString(R.string.reason_notification_access))) {
+                return new RemediationAction(
+                        RemediationActionType.NOTIFICATION_LISTENER_SETTINGS,
+                        packageName,
+                        getString(R.string.action_review_notification_access),
+                        RemediationActionType.NOTIFICATION_LISTENER_SETTINGS.name()
+                );
+            }
+            if (reasonText.contains(getString(R.string.reason_overlay))
+                    || reasonText.contains(getString(R.string.reason_overlay_access))) {
+                return new RemediationAction(
+                        RemediationActionType.OVERLAY_SETTINGS,
+                        packageName,
+                        getString(R.string.action_review_overlay),
+                        RemediationActionType.OVERLAY_SETTINGS.name() + ":" + packageName
+                );
+            }
+            if (reasonText.contains(getString(R.string.reason_battery_bypass))) {
+                return new RemediationAction(
+                        RemediationActionType.APP_SETTINGS,
+                        packageName,
+                        getString(R.string.action_open_app_settings),
+                        RemediationActionType.APP_SETTINGS.name() + ":" + packageName
+                );
+            }
+            return new RemediationAction(
+                    RemediationActionType.APP_SETTINGS,
+                    packageName,
+                    getString(R.string.action_open_app_settings),
+                    RemediationActionType.APP_SETTINGS.name() + ":" + packageName
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_surveillance))
+                || threat.attackType.equals(getString(R.string.attack_type_keylogger))
+                || threat.attackType.equals(getString(R.string.attack_type_sensitive_service))
+                || threat.attackType.equals(getString(R.string.attack_type_accessibility))) {
+            return new RemediationAction(
+                    RemediationActionType.APP_SETTINGS,
+                    packageName,
+                    getString(R.string.action_open_app_settings),
+                    RemediationActionType.APP_SETTINGS.name() + ":" + packageName
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_component_surface))) {
+            return new RemediationAction(
+                    RemediationActionType.PLAY_STORE_UPDATE,
+                    packageName,
+                    getString(R.string.action_check_for_update),
+                    RemediationActionType.PLAY_STORE_UPDATE.name() + ":" + packageName
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_sideload))) {
+            return new RemediationAction(
+                    RemediationActionType.PLAY_STORE_UPDATE,
+                    packageName,
+                    getString(R.string.action_verify_source_or_update),
+                    RemediationActionType.PLAY_STORE_UPDATE.name() + ":" + packageName
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_remote))) {
+            return new RemediationAction(
+                    RemediationActionType.DEVELOPMENT_SETTINGS,
+                    "",
+                    getString(R.string.action_review_developer_settings),
+                    RemediationActionType.DEVELOPMENT_SETTINGS.name()
+            );
+        }
+
+        if (threat.attackType.equals(getString(R.string.attack_type_hardening))) {
+            return new RemediationAction(
+                    RemediationActionType.SECURITY_SETTINGS,
+                    "",
+                    getString(R.string.action_review_security_settings),
+                    RemediationActionType.SECURITY_SETTINGS.name()
+            );
+        }
+
+        if (threat.removable && !TextUtils.isEmpty(threat.removablePackage)) {
+            return new RemediationAction(
+                    RemediationActionType.UNINSTALL,
+                    threat.removablePackage,
+                    getString(R.string.action_uninstall_app),
+                    RemediationActionType.UNINSTALL.name() + ":" + threat.removablePackage
+            );
+        }
+
+        return new RemediationAction(RemediationActionType.NONE, packageName, "", "none");
+    }
+
+    @Nullable
+    private Intent buildRemediationIntent(@NonNull RemediationAction action) {
+        switch (action.type) {
+            case APP_SETTINGS: {
+                if (!isValidPackageName(action.packageName)) {
+                    return null;
+                }
+                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + action.packageName));
+                return intent;
+            }
+            case UNKNOWN_APP_SOURCES: {
+                if (!isValidPackageName(action.packageName)) {
+                    return null;
+                }
+                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                intent.setData(Uri.parse("package:" + action.packageName));
+                return intent;
+            }
+            case SECURITY_SETTINGS:
+                return new Intent(Settings.ACTION_SECURITY_SETTINGS);
+            case DEVELOPMENT_SETTINGS:
+                return new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
+            case DEFAULT_APPS:
+                return new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS);
+            case OVERLAY_SETTINGS: {
+                if (!isValidPackageName(action.packageName)) {
+                    return null;
+                }
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+                intent.setData(Uri.parse("package:" + action.packageName));
+                return intent;
+            }
+            case NOTIFICATION_LISTENER_SETTINGS:
+                return new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+            case ACCESSIBILITY_SETTINGS:
+                return new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            case PLAY_STORE_UPDATE: {
+                if (!isValidPackageName(action.packageName)) {
+                    return null;
+                }
+                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + action.packageName));
+                marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (canResolveIntent(marketIntent)) {
+                    return marketIntent;
+                }
+                Intent webIntent = new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("https://play.google.com/store/apps/details?id=" + action.packageName));
+                webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                return webIntent;
+            }
+            case UNINSTALL: {
+                if (!isValidPackageName(action.packageName)) {
+                    return null;
+                }
+                Intent uninstallIntent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
+                uninstallIntent.setData(Uri.parse("package:" + action.packageName));
+                uninstallIntent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+                return uninstallIntent;
+            }
+            case NONE:
+            default:
+                return null;
+        }
+    }
+
+    private boolean canResolveIntent(@NonNull Intent intent) {
+        PackageManager packageManager = getPackageManager();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return packageManager.resolveActivity(intent,
+                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY)) != null;
+        }
+        return packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null;
+    }
+
+    @NonNull
+    private String getRecommendedActionLabel(@NonNull RemediationActionType actionType) {
+        switch (actionType) {
+            case APP_SETTINGS:
+                return getString(R.string.action_open_app_settings);
+            case UNKNOWN_APP_SOURCES:
+                return getString(R.string.action_review_unknown_installs);
+            case SECURITY_SETTINGS:
+                return getString(R.string.action_review_security_settings);
+            case DEVELOPMENT_SETTINGS:
+                return getString(R.string.action_review_developer_settings);
+            case DEFAULT_APPS:
+                return getString(R.string.action_review_default_apps);
+            case OVERLAY_SETTINGS:
+                return getString(R.string.action_review_overlay);
+            case NOTIFICATION_LISTENER_SETTINGS:
+                return getString(R.string.action_review_notification_access);
+            case ACCESSIBILITY_SETTINGS:
+                return getString(R.string.action_review_accessibility);
+            case PLAY_STORE_UPDATE:
+                return getString(R.string.action_check_for_update);
+            case UNINSTALL:
+                return getString(R.string.action_uninstall_app);
+            case NONE:
+            default:
+                return getString(R.string.action_manual_review);
+        }
+    }
+
+    private boolean isValidPackageName(@Nullable String packageName) {
+        return !TextUtils.isEmpty(packageName) && packageName.matches(PACKAGE_NAME_PATTERN);
+    }
+
+    private void logWarn(@NonNull String message, @Nullable Throwable throwable) {
+        if (isDebugLoggingEnabled()) {
+            Log.w(TAG, message, throwable);
+        }
+    }
+
+    private void logError(@NonNull String message, @Nullable Throwable throwable) {
+        if (isDebugLoggingEnabled()) {
+            Log.e(TAG, message, throwable);
+        }
+    }
+
+    private boolean isDebugLoggingEnabled() {
+        return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
 
     private int dp(int value) {
@@ -2200,6 +3386,49 @@ public class MainActivity extends AppCompatActivity {
 
     private interface ScanSectionSupplier {
         ScanSection get();
+    }
+
+    private static final class ScanHistoryEntry {
+        final long timestamp;
+        final List<ScanSection> sections;
+
+        ScanHistoryEntry(long timestamp, @NonNull List<ScanSection> sections) {
+            this.timestamp = timestamp;
+            this.sections = sections;
+        }
+    }
+
+    private enum RemediationActionType {
+        NONE,
+        APP_SETTINGS,
+        UNKNOWN_APP_SOURCES,
+        SECURITY_SETTINGS,
+        DEVELOPMENT_SETTINGS,
+        DEFAULT_APPS,
+        OVERLAY_SETTINGS,
+        NOTIFICATION_LISTENER_SETTINGS,
+        ACCESSIBILITY_SETTINGS,
+        PLAY_STORE_UPDATE,
+        UNINSTALL
+    }
+
+    private static final class RemediationAction {
+        final RemediationActionType type;
+        final String packageName;
+        final String label;
+        final String uniqueKey;
+
+        RemediationAction(
+                @NonNull RemediationActionType type,
+                @Nullable String packageName,
+                @NonNull String label,
+                @NonNull String uniqueKey
+        ) {
+            this.type = type;
+            this.packageName = packageName == null ? "" : packageName;
+            this.label = label;
+            this.uniqueKey = uniqueKey;
+        }
     }
 
     @NonNull

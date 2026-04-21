@@ -8,136 +8,198 @@
     android:background="@drawable/bg_app_gradient"
     tools:context=".MainActivity">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/homeScreen"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:paddingLeft="24dp"
-        android:paddingTop="40dp"
-        android:paddingRight="24dp"
-        android:paddingBottom="32dp">
+        android:clipToPadding="false"
+        android:fillViewport="true">
 
         <LinearLayout
+            android:id="@+id/homeContent"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_glass_hero"
-            android:gravity="center"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="26dp">
+            android:gravity="center_horizontal"
+            android:paddingLeft="24dp"
+            android:paddingTop="28dp"
+            android:paddingRight="24dp"
+            android:paddingBottom="24dp">
 
-            <TextView
-                android:id="@+id/homeTitle"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/homeHeroCard"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
+                android:background="@drawable/bg_glass_hero"
                 android:gravity="center"
-                android:text="@string/home_title"
-                android:textColor="@color/ink_primary"
-                android:textSize="34sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/startScanButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:background="@drawable/bg_glass_button"
-                android:elevation="2dp"
-                android:fontFamily="sans-serif-black"
+                android:orientation="vertical"
                 android:paddingLeft="24dp"
-                android:paddingTop="8dp"
+                android:paddingTop="24dp"
                 android:paddingRight="24dp"
-                android:paddingBottom="8dp"
-                android:text="@string/start_scan"
-                android:textAllCaps="false"
-                android:textColor="@color/button_text"
-                android:textSize="18sp" />
+                android:paddingBottom="24dp">
 
-            <TextView
-                android:id="@+id/homeDescription"
+                <TextView
+                    android:id="@+id/homeTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:autoSizeMaxTextSize="28sp"
+                    android:autoSizeMinTextSize="22sp"
+                    android:autoSizeStepGranularity="1sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="-0.015"
+                    android:gravity="center"
+                    android:text="@string/home_title"
+                    android:textColor="@color/ink_primary"
+                    android:textSize="28sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/startScanButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/bg_glass_button"
+                    android:elevation="0dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:minHeight="48dp"
+                    android:minWidth="0dp"
+                    android:paddingLeft="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingRight="20dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/start_scan"
+                    android:textAllCaps="false"
+                    android:textColor="@color/button_text"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/homeDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:lineSpacingExtra="1dp"
+                    android:text="@string/home_description"
+                    android:textColor="@color/ink_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/languageToggleButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_glass_panel"
+                android:contentDescription="@string/language_toggle"
+                android:elevation="0dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_language"
+                app:tint="@color/ink_primary" />
+
+            <LinearLayout
+                android:id="@+id/languageDropdown"
+                android:layout_width="188dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_glass_panel"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:visibility="gone">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/englishLanguageButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="48dp"
+                    android:text="@string/language_english"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/spanishLanguageButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="48dp"
+                    android:text="@string/language_spanish"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/germanLanguageButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="48dp"
+                    android:text="@string/language_german"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chineseLanguageButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="48dp"
+                    android:text="@string/language_chinese"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/slovenianLanguageButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="48dp"
+                    android:text="@string/language_slovenian"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/historySection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:fontFamily="sans-serif-medium"
-                android:gravity="center"
-                android:lineSpacingExtra="3dp"
-                android:text="@string/home_description"
-                android:textColor="@color/ink_secondary"
-                android:textSize="16sp" />
+                android:layout_marginTop="18dp"
+                android:background="@drawable/bg_glass_panel"
+                android:orientation="vertical"
+                android:paddingLeft="18dp"
+                android:paddingTop="18dp"
+                android:paddingRight="18dp"
+                android:paddingBottom="10dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/historyTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/history_title"
+                    android:textColor="@color/ink_primary"
+                    android:textSize="20sp" />
+
+                <LinearLayout
+                    android:id="@+id/historyContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
         </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/languageToggleButton"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_marginTop="18dp"
-            android:background="@drawable/bg_glass_panel"
-            android:contentDescription="@string/language_toggle"
-            android:padding="14dp"
-            android:src="@drawable/ic_language"
-            android:tint="@color/ink_primary" />
-
-        <LinearLayout
-            android:id="@+id/languageDropdown"
-            android:layout_width="220dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_glass_panel"
-            android:orientation="vertical"
-            android:padding="12dp"
-            android:visibility="gone">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/englishLanguageButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/language_english"
-                android:textAllCaps="false"
-                android:textColor="@color/ink_primary" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/spanishLanguageButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/language_spanish"
-                android:textAllCaps="false"
-                android:textColor="@color/ink_primary" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/germanLanguageButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/language_german"
-                android:textAllCaps="false"
-                android:textColor="@color/ink_primary" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/chineseLanguageButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/language_chinese"
-                android:textAllCaps="false"
-                android:textColor="@color/ink_primary" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/slovenianLanguageButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/language_slovenian"
-                android:textAllCaps="false"
-                android:textColor="@color/ink_primary" />
-        </LinearLayout>
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
     <LinearLayout
         android:id="@+id/scanScreen"
@@ -153,41 +215,50 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingLeft="24dp"
-            android:paddingTop="36dp"
+            android:paddingTop="28dp"
             android:paddingRight="24dp"
-            android:paddingBottom="18dp">
+            android:paddingBottom="16dp">
 
             <TextView
                 android:id="@+id/scanTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
+                android:accessibilityHeading="true"
+                android:autoSizeMaxTextSize="24sp"
+                android:autoSizeMinTextSize="20sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="-0.01"
                 android:text="@string/scan_progress_label"
                 android:textColor="@color/ink_primary"
-                android:textSize="28sp" />
+                android:textSize="24sp" />
 
             <TextView
                 android:id="@+id/currentScanLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
+                android:accessibilityLiveRegion="polite"
+                android:layout_marginTop="14dp"
                 android:background="@drawable/bg_glass_panel"
                 android:gravity="center"
-                android:padding="14dp"
+                android:padding="11dp"
+                android:fontFamily="sans-serif"
                 android:textColor="@color/ink_primary"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 tools:text="Currently scanning: installed apps and package sources" />
 
             <TextView
                 android:id="@+id/scanSubtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="12dp"
+                android:fontFamily="sans-serif"
                 android:gravity="center"
-                android:lineSpacingExtra="3dp"
+                android:lineSpacingExtra="1dp"
                 android:text="@string/scan_description"
                 android:textColor="@color/ink_secondary"
-                android:textSize="15sp" />
+                android:textSize="13sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -199,25 +270,25 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingLeft="24dp"
-            android:paddingTop="32dp"
+            android:paddingTop="24dp"
             android:paddingRight="24dp"
-            android:paddingBottom="42dp">
+            android:paddingBottom="28dp">
 
             <com.google.android.material.progressindicator.CircularProgressIndicator
                 android:id="@+id/circularProgress"
-                android:layout_width="124dp"
-                android:layout_height="124dp"
+                android:layout_width="104dp"
+                android:layout_height="104dp"
                 android:indeterminate="true"
                 app:indicatorColor="@color/liquid_blue"
-                app:indicatorSize="124dp"
+                app:indicatorSize="104dp"
                 app:trackColor="@color/glass_track"
-                app:trackThickness="10dp" />
+                app:trackThickness="8dp" />
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/linearProgress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
+                android:layout_marginTop="20dp"
                 app:indicatorColor="@color/liquid_blue"
                 app:trackColor="@color/glass_track" />
 
@@ -225,19 +296,22 @@
                 android:id="@+id/scanCounter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:accessibilityLiveRegion="polite"
+                android:layout_marginTop="12dp"
+                android:fontFamily="sans-serif-medium"
                 android:textColor="@color/ink_primary"
-                android:textSize="17sp"
+                android:textSize="15sp"
                 tools:text="2 / 5 checks complete" />
 
             <TextView
                 android:id="@+id/scanFootnote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="10dp"
+                android:fontFamily="sans-serif"
                 android:gravity="center"
                 android:textColor="@color/ink_secondary"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 tools:text="No ads. No signup. Scanning locally on-device." />
         </LinearLayout>
     </LinearLayout>
@@ -256,29 +330,37 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingLeft="24dp"
-            android:paddingTop="42dp"
+            android:paddingTop="30dp"
             android:paddingRight="24dp"
-            android:paddingBottom="32dp">
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/summaryTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
+                android:accessibilityHeading="true"
+                android:accessibilityLiveRegion="polite"
+                android:autoSizeMaxTextSize="27sp"
+                android:autoSizeMinTextSize="22sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="-0.015"
                 android:gravity="center"
                 android:textColor="@color/summary_text"
-                android:textSize="32sp"
+                android:textSize="27sp"
                 tools:text="Threat indicators detected" />
 
             <TextView
                 android:id="@+id/summaryBody"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="12dp"
+                android:fontFamily="sans-serif"
                 android:gravity="center"
-                android:lineSpacingExtra="3dp"
+                android:lineSpacingExtra="1dp"
                 android:textColor="@color/summary_text"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 tools:text="Potential malware or serious security abuse was detected." />
 
             <LinearLayout
@@ -292,14 +374,15 @@
                 android:id="@+id/viewReportButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
+                android:layout_marginTop="22dp"
                 android:background="@drawable/bg_glass_button"
-                android:elevation="2dp"
-                android:fontFamily="sans-serif-black"
+                android:elevation="0dp"
+                android:fontFamily="sans-serif-medium"
+                android:minHeight="48dp"
                 android:text="@string/view_report"
                 android:textAllCaps="false"
                 android:textColor="@color/button_text"
-                android:textSize="18sp" />
+                android:textSize="15sp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -315,35 +398,42 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingLeft="20dp"
-            android:paddingTop="28dp"
-            android:paddingRight="20dp"
-            android:paddingBottom="32dp">
+            android:paddingLeft="22dp"
+            android:paddingTop="22dp"
+            android:paddingRight="22dp"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/reportTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
+                android:accessibilityHeading="true"
+                android:autoSizeMaxTextSize="25sp"
+                android:autoSizeMinTextSize="21sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="-0.015"
                 android:text="@string/report_title"
                 android:textColor="@color/ink_primary"
-                android:textSize="30sp" />
+                android:textSize="25sp" />
 
             <TextView
                 android:id="@+id/reportSubtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:lineSpacingExtra="3dp"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif"
+                android:lineSpacingExtra="1dp"
                 android:text="@string/report_subtitle"
                 android:textColor="@color/ink_secondary"
-                android:textSize="15sp" />
+                android:textSize="13sp" />
 
             <LinearLayout
                 android:id="@+id/reportSectionsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
+                android:layout_marginTop="16dp"
                 android:orientation="vertical" />
 
             <com.google.android.material.button.MaterialButton
@@ -351,13 +441,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="30dp"
+                android:layout_marginTop="22dp"
                 android:background="@drawable/bg_glass_button"
-                android:elevation="2dp"
-                android:fontFamily="sans-serif-black"
+                android:elevation="0dp"
+                android:fontFamily="sans-serif-medium"
+                android:minHeight="48dp"
                 android:textAllCaps="false"
                 android:textColor="@color/button_text"
-                android:textSize="18sp"
+                android:textSize="15sp"
                 tools:text="Remove Malware" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
@@ -374,32 +465,52 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingLeft="20dp"
-            android:paddingTop="28dp"
-            android:paddingRight="20dp"
-            android:paddingBottom="32dp">
+            android:paddingLeft="22dp"
+            android:paddingTop="22dp"
+            android:paddingRight="22dp"
+            android:paddingBottom="24dp">
 
             <TextView
+                android:id="@+id/removalTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
+                android:accessibilityHeading="true"
+                android:autoSizeMaxTextSize="25sp"
+                android:autoSizeMinTextSize="21sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="-0.015"
                 android:text="@string/removal_page_title"
                 android:textColor="@color/ink_primary"
-                android:textSize="30sp" />
+                android:textSize="25sp" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif"
                 android:text="@string/removal_page_subtitle"
                 android:textColor="@color/ink_secondary"
-                android:textSize="15sp" />
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/removalSelectionSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite"
+                android:layout_marginTop="14dp"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center_horizontal"
+                android:textColor="@color/ink_primary"
+                android:textSize="14sp"
+                tools:text="2 threats selected for removal." />
 
             <LinearLayout
                 android:id="@+id/removalThreatsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="16dp"
                 android:orientation="vertical" />
 
             <com.google.android.material.button.MaterialButton
@@ -407,14 +518,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="26dp"
+                android:layout_marginTop="20dp"
                 android:background="@drawable/bg_glass_button"
-                android:elevation="2dp"
-                android:fontFamily="sans-serif-black"
+                android:elevation="0dp"
+                android:fontFamily="sans-serif-medium"
+                android:minHeight="48dp"
                 android:text="@string/remove_selected"
                 android:textAllCaps="false"
                 android:textColor="@color/button_text"
-                android:textSize="18sp" />
+                android:textSize="15sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/removalBackButton"
@@ -422,7 +534,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
+                android:fontFamily="sans-serif"
+                android:minHeight="48dp"
                 android:text="@string/back_to_report"
                 android:textAllCaps="false"
                 android:textColor="@color/ink_primary" />

@@ -3,11 +3,15 @@
     <string name="home_title">Full Scan Security</string>
     <string name="home_description">Escaneo gratis. Sin anuncios. Sin inicio de sesión.</string>
     <string name="language_toggle">Cambiar idioma</string>
-    <string name="language_english">English</string>
-    <string name="language_spanish">Spanish</string>
-    <string name="language_german">German</string>
-    <string name="language_chinese">Chinese</string>
-    <string name="language_slovenian">Slovenian</string>
+    <string name="language_english">Inglés</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_german">Alemán</string>
+    <string name="language_chinese">Chino</string>
+    <string name="language_slovenian">Esloveno</string>
+    <string name="history_title">Historial</string>
+    <string name="history_item_threats">%1$d amenazas</string>
+    <string name="history_item_content_description">Escaneo de %1$s con %2$d amenazas.</string>
+
     <string name="start_scan">Iniciar escaneo completo</string>
     <string name="scan_progress_label">Escaneo completo en curso</string>
     <string name="scan_description">Comprobando apps, accesos, archivos y estado del dispositivo.</string>
@@ -19,12 +23,14 @@
     <string name="scan_footer">Privado. Local. Sin cuenta.</string>
     <string name="scan_counter_value">%1$d / %2$d</string>
     <string name="preparing_scan">Preparando escaneo...</string>
+
     <string name="summary_safe_title">No se encontraron amenazas</string>
     <string name="summary_safe_body">No apareció nada riesgoso en esta pasada.</string>
     <string name="summary_danger_title">Amenazas detectadas</string>
     <string name="summary_danger_body">Revisa los elementos marcados y elimina lo que no sea de confianza.</string>
     <string name="summary_clean_chip">5 áreas revisadas. Sin coincidencias.</string>
     <string name="summary_clean_chip_dynamic">%1$d áreas revisadas. Sin coincidencias.</string>
+
     <string name="view_report">Abrir informe</string>
     <string name="report_title">Informe de amenazas</string>
     <string name="report_subtitle">Vista corta de cada área revisada.</string>
@@ -35,10 +41,26 @@
     <string name="status_clean">Limpio</string>
     <string name="status_warning">Amenazas</string>
     <string name="section_clear">No hay marcadores de amenaza en esta sección.</string>
+
     <string name="removal_page_title">Eliminación guiada</string>
-    <string name="removal_page_subtitle">Elige qué eliminar.</string>
+    <string name="removal_page_subtitle">Elige qué corregir.</string>
     <string name="remove_selected">Eliminar amenazas seleccionadas</string>
+    <string name="apply_selected_actions">Aplicar acciones seleccionadas</string>
     <string name="back_to_report">Volver al informe</string>
+    <string name="action_open_app_settings">Abrir ajustes de la app</string>
+    <string name="action_review_unknown_installs">Revisar instalaciones desconocidas</string>
+    <string name="action_review_security_settings">Revisar ajustes de seguridad</string>
+    <string name="action_review_developer_settings">Revisar ajustes de desarrollador</string>
+    <string name="action_review_default_apps">Revisar apps predeterminadas</string>
+    <string name="action_review_overlay">Revisar acceso de superposición</string>
+    <string name="action_review_notification_access">Revisar acceso a notificaciones</string>
+    <string name="action_review_accessibility">Revisar acceso de accesibilidad</string>
+    <string name="action_check_for_update">Buscar actualización</string>
+    <string name="action_verify_source_or_update">Verificar origen o actualizar</string>
+    <string name="action_uninstall_app">Desinstalar app</string>
+    <string name="action_manual_review">Revisión manual</string>
+    <string name="action_unavailable">Esta acción no está disponible en este dispositivo.</string>
+
     <string name="section_apps">Apps instaladas</string>
     <string name="section_permissions">Permisos</string>
     <string name="section_accessibility">Accesibilidad y admin</string>
@@ -52,6 +74,9 @@
     <string name="section_surveillance">Riesgo de vigilancia</string>
     <string name="section_device">Estado del dispositivo</string>
     <string name="section_storage">Archivos accesibles</string>
+    <string name="section_sensitive_services">Servicios sensibles</string>
+    <string name="section_exposed_components">Componentes expuestos</string>
+
     <string name="summary_section_apps_degraded">Escaneo de apps degradado.</string>
     <string name="summary_section_permissions_degraded">Escaneo de permisos degradado.</string>
     <string name="summary_section_accessibility_degraded">Escaneo de accesibilidad degradado.</string>
@@ -65,6 +90,9 @@
     <string name="summary_section_surveillance_degraded">Escaneo de vigilancia degradado.</string>
     <string name="summary_section_device_degraded">Escaneo del dispositivo degradado.</string>
     <string name="summary_section_storage_degraded">Escaneo de almacenamiento degradado.</string>
+    <string name="summary_section_sensitive_services_degraded">Escaneo de servicios sensibles degradado.</string>
+    <string name="summary_section_exposed_components_degraded">Escaneo de componentes degradado.</string>
+
     <string name="summary_installed_apps">apps revisadas.</string>
     <string name="summary_permissions">apps revisadas por acceso riesgoso.</string>
     <string name="summary_accessibility">apps revisadas por control elevado.</string>
@@ -75,20 +103,23 @@
     <string name="summary_browser_sms_call">Se revisaron manejadores predeterminados de comunicación y navegación.</string>
     <string name="summary_live_posture">Se revisó si las alertas en vivo pueden seguir funcionando.</string>
     <string name="summary_input_methods">Se revisaron teclados activos y teclado predeterminado.</string>
-    <string name="summary_surveillance">%1$d apps revisadas por acceso tipo spyware.</string>
+    <string name="summary_surveillance">%1$d apps revisadas por acceso tipo stalkerware.</string>
     <string name="summary_device">Se revisaron estado de depuración, bloqueo y postura del dispositivo.</string>
     <string name="summary_storage">archivos revisados en el almacenamiento visible.</string>
+    <string name="summary_sensitive_services">%1$d apps revisadas por roles de servicio sensibles.</string>
+    <string name="summary_exposed_components">%1$d apps revisadas por superficie de componentes expuestos.</string>
+
     <string name="finding_apps_body">Esta app parece riesgosa.</string>
     <string name="finding_permissions_body">Esta app pide una mezcla de permisos riesgosa.</string>
     <string name="finding_accessibility_body">Esta app controla superficies sensibles del dispositivo.</string>
     <string name="finding_storage_body">Este archivo parece un instalador o payload.</string>
     <string name="finding_download_body">Esta descarga parece un paquete lateral.</string>
     <string name="finding_private_dns_off_title">DNS privado desactivado</string>
-    <string name="finding_private_dns_off_body">El tráfico DNS no está endurecido.</string>
+    <string name="finding_private_dns_off_body">El tráfico DNS no está reforzado.</string>
     <string name="finding_custom_private_dns_title">DNS privado personalizado</string>
     <string name="finding_custom_private_dns_body">Hay un host DNS personalizado activo.</string>
     <string name="finding_user_ca_title">Se encontraron certificados CA de usuario</string>
-    <string name="finding_user_ca_body">Los CA añadidos por el usuario pueden interceptar tráfico.</string>
+    <string name="finding_user_ca_body">Los certificados CA añadidos por el usuario pueden interceptar tráfico.</string>
     <string name="finding_proxy_active_title">Proxy activo</string>
     <string name="finding_proxy_active_body">El tráfico puede pasar por un proxy.</string>
     <string name="finding_always_on_vpn_title">VPN siempre activa</string>
@@ -123,12 +154,15 @@
     <string name="finding_keyboard_risk_body">El teclado tiene acceso elevado a datos.</string>
     <string name="finding_surveillance_body">La app tiene un perfil de acceso tipo stalkerware.</string>
     <string name="finding_default_handler_body">La app %1$s parece riesgosa.</string>
+    <string name="finding_sensitive_service_body">La app expone roles de servicio de alta confianza con señales de riesgo.</string>
+    <string name="finding_exposed_components_body">La app expone una superficie pública de componentes inusualmente amplia.</string>
     <string name="finding_dev_options_title">Opciones de desarrollador activas</string>
     <string name="finding_dev_options_body">Las opciones de desarrollador están activadas.</string>
     <string name="finding_adb_title">ADB activado</string>
     <string name="finding_adb_body">La depuración USB está activada.</string>
     <string name="finding_lock_title">Sin bloqueo seguro</string>
     <string name="finding_lock_body">Este dispositivo no tiene bloqueo seguro.</string>
+
     <string name="attack_type_sideload">Riesgo lateral</string>
     <string name="attack_type_permissions">Abuso de permisos</string>
     <string name="attack_type_accessibility">Abuso de admin</string>
@@ -148,9 +182,19 @@
     <string name="attack_type_remote">Acceso remoto</string>
     <string name="attack_type_storage">Artefacto de archivo</string>
     <string name="attack_type_downloads">Artefacto descargado</string>
+    <string name="attack_type_sensitive_service">Riesgo de servicio sensible</string>
+    <string name="attack_type_component_surface">Exposición de componentes</string>
+
     <string name="role_default_sms">SMS predeterminado</string>
     <string name="role_default_dialer">Marcador predeterminado</string>
     <string name="role_default_browser">Navegador predeterminado</string>
+    <string name="role_accessibility_service">Servicio de accesibilidad</string>
+    <string name="role_notification_listener">Listener de notificaciones</string>
+    <string name="role_autofill_service">Servicio de autocompletar</string>
+    <string name="role_input_method">Método de entrada</string>
+    <string name="role_vpn_service">Servicio VPN</string>
+    <string name="role_device_admin">Administrador del dispositivo</string>
+
     <string name="reason_unknown_source">Origen desconocido</string>
     <string name="reason_debug_build">Compilación debug</string>
     <string name="reason_suspicious_name">Nombre sospechoso</string>
@@ -168,6 +212,7 @@
     <string name="reason_microphone">Micrófono</string>
     <string name="reason_unknown_installer">Instalador desconocido</string>
     <string name="reason_sensitive_comms">Acceso sensible a comunicaciones</string>
+
     <string name="label_mic">Mic</string>
     <string name="label_camera">Cámara</string>
     <string name="label_location">Ubicación</string>
@@ -177,6 +222,7 @@
     <string name="label_all_apps">Todas las apps</string>
     <string name="label_unknown">desconocido</string>
     <string name="label_google_play">Google Play</string>
+
     <string name="installer_prefix">Instalador:</string>
     <string name="permissions_prefix">Permisos:</string>
     <string name="detail_private_dns_mode">private_dns_mode=</string>
@@ -184,6 +230,7 @@
     <string name="detail_user_ca_count">Se detectaron %1$d alias CA de usuario.</string>
     <string name="detail_default_proxy_configured">Hay un proxy predeterminado configurado.</string>
     <string name="detail_always_on_vpn_package">Paquete VPN siempre activa:</string>
+    <string name="detail_vpn_transport">NetworkCapabilities informa transporte VPN.</string>
     <string name="detail_package_verifier_off">PACKAGE_VERIFIER_ENABLE=0</string>
     <string name="detail_adb_verifier_off">verifier_verify_adb_installs=0</string>
     <string name="detail_play_services_missing">No se encontró com.google.android.gms.</string>
@@ -199,6 +246,8 @@
     <string name="detail_dev_options">Opciones de desarrollador activadas</string>
     <string name="detail_adb">ADB activado</string>
     <string name="detail_lock">Sin PIN, contraseña ni patrón</string>
+    <string name="detail_exposed_components">%1$d componentes exportados, %2$d sin protección.</string>
+
     <string name="hint_trusted_dns">Usa automático o un proveedor confiable.</string>
     <string name="hint_verify_resolver">Verifica el propietario del resolvedor.</string>
     <string name="hint_review_credentials">Revisa las credenciales instaladas por el usuario.</string>
@@ -222,12 +271,15 @@
     <string name="hint_review_keyboard">Revisa o cambia el teclado si no confías en él.</string>
     <string name="hint_review_surveillance_app">Revisa la app si no necesita claramente este acceso.</string>
     <string name="hint_review_default_handler">Revisa o cambia la app predeterminada si no confías en ella.</string>
+    <string name="hint_review_sensitive_service_app">Revisa el rol del servicio y elimina la app si no necesita este nivel de confianza.</string>
+    <string name="hint_review_exposed_components_app">Revisa la app si expone demasiada superficie pública para su propósito.</string>
     <string name="permissions_hint">Elimínala si ese acceso no tiene sentido.</string>
     <string name="accessibility_hint">Desactiva el acceso elevado si no confías en la app.</string>
     <string name="hardening_hint">Apágalo cuando no haga falta.</string>
     <string name="lock_hint">Añade un bloqueo seguro.</string>
     <string name="storage_hint">Elimínalo si no confías en la fuente.</string>
     <string name="downloads_hint">Elimínalo si no lo esperabas.</string>
+
     <string name="location_network_settings">Ajustes de red</string>
     <string name="location_trust_store">Almacén de confianza del sistema</string>
     <string name="location_active_network">Red activa</string>
@@ -236,8 +288,25 @@
     <string name="location_filesystem">Sistema de archivos</string>
     <string name="location_boot_chain">Cadena de arranque</string>
     <string name="location_system">Ajustes del sistema</string>
+
     <string name="details_attack">Ataque:</string>
     <string name="details_location">Ubicación:</string>
     <string name="details_reason">Motivo:</string>
     <string name="details_package">Paquete:</string>
+    <string name="a11y_language_menu_expanded">Menú de idioma desplegado.</string>
+    <string name="a11y_language_menu_collapsed">Menú de idioma contraído.</string>
+    <string name="a11y_scan_step_announcement">Escaneando %1$s. %2$d de %3$d.</string>
+    <string name="a11y_scan_complete_safe">Escaneo completo. No se encontraron amenazas.</string>
+    <string name="a11y_scan_complete_danger">Escaneo completo. Amenazas detectadas.</string>
+    <string name="a11y_report_opened">Informe de amenazas abierto.</string>
+    <string name="a11y_removal_opened">Eliminación guiada abierta.</string>
+    <string name="a11y_home_opened">Pantalla de inicio.</string>
+    <string name="a11y_selected_threats">%1$d amenazas seleccionadas para eliminar.</string>
+    <string name="a11y_no_selected_threats">No hay amenazas seleccionadas para eliminar.</string>
+    <string name="a11y_details_for">Detalles de %1$s</string>
+    <string name="a11y_finding_item">%1$s. %2$s. %3$s.</string>
+    <string name="a11y_section_summary">%1$s. %2$s. %3$d hallazgos.</string>
+    <string name="a11y_removal_item">%1$s. %2$s. Seleccionado: %3$s.</string>
+    <string name="a11y_selected_yes">sí</string>
+    <string name="a11y_selected_no">no</string>
 </resources>

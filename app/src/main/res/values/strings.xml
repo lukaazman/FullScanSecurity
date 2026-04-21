@@ -8,6 +8,9 @@
     <string name="language_german">German</string>
     <string name="language_chinese">Chinese</string>
     <string name="language_slovenian">Slovenian</string>
+    <string name="history_title">History</string>
+    <string name="history_item_threats">%1$d threats</string>
+    <string name="history_item_content_description">Scan from %1$s with %2$d threats.</string>
 
     <string name="start_scan">Start Full Scan</string>
     <string name="scan_progress_label">Full scan in progress</string>
@@ -40,9 +43,23 @@
     <string name="section_clear">No threat markers in this section.</string>
 
     <string name="removal_page_title">Guided Removal</string>
-    <string name="removal_page_subtitle">Pick what to remove.</string>
+    <string name="removal_page_subtitle">Pick what to fix.</string>
     <string name="remove_selected">Remove Selected Threats</string>
+    <string name="apply_selected_actions">Apply Selected Actions</string>
     <string name="back_to_report">Back to Report</string>
+    <string name="action_open_app_settings">Open app settings</string>
+    <string name="action_review_unknown_installs">Review unknown installs</string>
+    <string name="action_review_security_settings">Review security settings</string>
+    <string name="action_review_developer_settings">Review developer settings</string>
+    <string name="action_review_default_apps">Review default apps</string>
+    <string name="action_review_overlay">Review overlay access</string>
+    <string name="action_review_notification_access">Review notification access</string>
+    <string name="action_review_accessibility">Review accessibility access</string>
+    <string name="action_check_for_update">Check for update</string>
+    <string name="action_verify_source_or_update">Verify source or update</string>
+    <string name="action_uninstall_app">Uninstall app</string>
+    <string name="action_manual_review">Manual review</string>
+    <string name="action_unavailable">This action is not available on this device.</string>
 
     <string name="section_apps">Installed apps</string>
     <string name="section_permissions">Permissions</string>
@@ -57,6 +74,8 @@
     <string name="section_surveillance">Surveillance risk</string>
     <string name="section_device">Device posture</string>
     <string name="section_storage">Reachable files</string>
+    <string name="section_sensitive_services">Sensitive services</string>
+    <string name="section_exposed_components">Exposed components</string>
 
     <string name="summary_section_apps_degraded">App scan degraded.</string>
     <string name="summary_section_permissions_degraded">Permission scan degraded.</string>
@@ -71,6 +90,8 @@
     <string name="summary_section_surveillance_degraded">Surveillance scan degraded.</string>
     <string name="summary_section_device_degraded">Device posture scan degraded.</string>
     <string name="summary_section_storage_degraded">Storage scan degraded.</string>
+    <string name="summary_section_sensitive_services_degraded">Sensitive-service scan degraded.</string>
+    <string name="summary_section_exposed_components_degraded">Component scan degraded.</string>
 
     <string name="summary_installed_apps">apps checked.</string>
     <string name="summary_permissions">apps checked for risky access.</string>
@@ -85,6 +106,8 @@
     <string name="summary_surveillance">%1$d apps checked for stalkingware-style access.</string>
     <string name="summary_device">Checked debug state, lock state and device posture.</string>
     <string name="summary_storage">files checked in visible storage.</string>
+    <string name="summary_sensitive_services">%1$d apps checked for sensitive service roles.</string>
+    <string name="summary_exposed_components">%1$d apps checked for exposed component surface.</string>
 
     <string name="finding_apps_body">This app looks risky.</string>
     <string name="finding_permissions_body">This app asks for a risky permission mix.</string>
@@ -131,6 +154,8 @@
     <string name="finding_keyboard_risk_body">Keyboard app has elevated data access.</string>
     <string name="finding_surveillance_body">App has a stalkingware-like data profile.</string>
     <string name="finding_default_handler_body">%1$s app looks risky.</string>
+    <string name="finding_sensitive_service_body">App exposes high-trust service roles with risky signals.</string>
+    <string name="finding_exposed_components_body">App exposes an unusually broad public component surface.</string>
     <string name="finding_dev_options_title">Developer options on</string>
     <string name="finding_dev_options_body">Developer options are enabled.</string>
     <string name="finding_adb_title">ADB on</string>
@@ -157,10 +182,18 @@
     <string name="attack_type_remote">Remote access</string>
     <string name="attack_type_storage">File artifact</string>
     <string name="attack_type_downloads">Download artifact</string>
+    <string name="attack_type_sensitive_service">Sensitive service risk</string>
+    <string name="attack_type_component_surface">Component exposure</string>
 
     <string name="role_default_sms">Default SMS</string>
     <string name="role_default_dialer">Default dialer</string>
     <string name="role_default_browser">Default browser</string>
+    <string name="role_accessibility_service">Accessibility service</string>
+    <string name="role_notification_listener">Notification listener</string>
+    <string name="role_autofill_service">Autofill service</string>
+    <string name="role_input_method">Input method</string>
+    <string name="role_vpn_service">VPN service</string>
+    <string name="role_device_admin">Device admin</string>
 
     <string name="reason_unknown_source">Unknown source</string>
     <string name="reason_debug_build">Debug build</string>
@@ -213,6 +246,7 @@
     <string name="detail_dev_options">Developer options enabled</string>
     <string name="detail_adb">ADB enabled</string>
     <string name="detail_lock">No PIN, password or pattern</string>
+    <string name="detail_exposed_components">%1$d exported components, %2$d unprotected.</string>
 
     <string name="hint_trusted_dns">Use automatic or a trusted provider.</string>
     <string name="hint_verify_resolver">Verify the resolver owner.</string>
@@ -237,6 +271,8 @@
     <string name="hint_review_keyboard">Review or replace the keyboard if you do not trust it.</string>
     <string name="hint_review_surveillance_app">Review the app if it does not clearly need this access.</string>
     <string name="hint_review_default_handler">Review or replace the default app if you do not trust it.</string>
+    <string name="hint_review_sensitive_service_app">Review the service role and remove the app if it does not need this level of trust.</string>
+    <string name="hint_review_exposed_components_app">Review the app if it exposes too much public surface for its purpose.</string>
     <string name="permissions_hint">Remove it if the access does not make sense.</string>
     <string name="accessibility_hint">Turn off elevated access if you do not trust it.</string>
     <string name="hardening_hint">Turn this off when not needed.</string>
@@ -257,4 +293,20 @@
     <string name="details_location">Location:</string>
     <string name="details_reason">Reason:</string>
     <string name="details_package">Package:</string>
+    <string name="a11y_language_menu_expanded">Language menu expanded.</string>
+    <string name="a11y_language_menu_collapsed">Language menu collapsed.</string>
+    <string name="a11y_scan_step_announcement">Scanning %1$s. %2$d of %3$d.</string>
+    <string name="a11y_scan_complete_safe">Scan complete. No threats found.</string>
+    <string name="a11y_scan_complete_danger">Scan complete. Threats detected.</string>
+    <string name="a11y_report_opened">Threat report opened.</string>
+    <string name="a11y_removal_opened">Guided removal opened.</string>
+    <string name="a11y_home_opened">Home screen.</string>
+    <string name="a11y_selected_threats">%1$d threats selected for removal.</string>
+    <string name="a11y_no_selected_threats">No threats selected for removal.</string>
+    <string name="a11y_details_for">Details for %1$s</string>
+    <string name="a11y_finding_item">%1$s. %2$s. %3$s.</string>
+    <string name="a11y_section_summary">%1$s. %2$s. %3$d findings.</string>
+    <string name="a11y_removal_item">%1$s. %2$s. Selected: %3$s.</string>
+    <string name="a11y_selected_yes">yes</string>
+    <string name="a11y_selected_no">no</string>
 </resources>
