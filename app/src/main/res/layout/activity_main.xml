@@ -84,6 +84,18 @@
                     android:text="@string/home_description"
                     android:textColor="@color/ink_secondary"
                     android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/reviewAccessButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="48dp"
+                    android:text="@string/review_access"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
             </LinearLayout>
 
             <ImageButton
@@ -197,7 +209,82 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clearHistoryButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif"
+                    android:minHeight="44dp"
+                    android:text="@string/clear_history"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink_primary" />
             </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/accessCenterScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_app_gradient"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="22dp"
+            android:paddingTop="22dp"
+            android:paddingRight="22dp"
+            android:paddingBottom="24dp">
+
+            <TextView
+                android:id="@+id/accessCenterTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
+                android:autoSizeMaxTextSize="25sp"
+                android:autoSizeMinTextSize="21sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="-0.015"
+                android:text="@string/access_center_title"
+                android:textColor="@color/ink_primary"
+                android:textSize="25sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif"
+                android:text="@string/access_center_subtitle"
+                android:textColor="@color/ink_secondary"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:id="@+id/accessCenterContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/accessCenterBackButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="20dp"
+                android:fontFamily="sans-serif"
+                android:minHeight="48dp"
+                android:text="@string/back_home"
+                android:textAllCaps="false"
+                android:textColor="@color/ink_primary" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

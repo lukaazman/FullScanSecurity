@@ -163,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
     private final ArrayDeque<RemediationAction> remediationQueue = new ArrayDeque<>();
 
     private NestedScrollView homeScreen;
+    private NestedScrollView accessCenterScreen;
     private LinearLayout scanScreen;
     private LinearLayout homeContent;
     private LinearLayout homeHeroCard;
@@ -178,12 +179,16 @@ public class MainActivity extends AppCompatActivity {
     private MaterialButton chineseLanguageButton;
     private MaterialButton slovenianLanguageButton;
     private MaterialButton startScanButton;
+    private MaterialButton reviewAccessButton;
     private MaterialButton viewReportButton;
     private MaterialButton reportPrimaryButton;
     private MaterialButton removeSelectedButton;
     private MaterialButton removalBackButton;
+    private MaterialButton clearHistoryButton;
+    private MaterialButton accessCenterBackButton;
     private TextView homeTitle;
     private TextView scanTitle;
+    private TextView accessCenterTitle;
     private TextView reportTitle;
     private TextView removalTitle;
     private TextView currentScanLabel;
@@ -196,6 +201,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView summaryBody;
     private LinearLayout historySection;
     private LinearLayout historyContainer;
+    private LinearLayout accessCenterContainer;
     private LinearLayout summaryFindingsContainer;
     private LinearLayout reportSectionsContainer;
     private LinearLayout removalThreatsContainer;
@@ -235,6 +241,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshAccessibilityState();
+        if (accessCenterScreen.getVisibility() == View.VISIBLE) {
+            renderAccessCenter();
+        }
         if (pendingScanRequest && !scanInProgress && hasUsageStatsAccess()) {
             startScan();
         }
@@ -248,6 +257,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void bindViews() {
         homeScreen = findViewById(R.id.homeScreen);
+        accessCenterScreen = findViewById(R.id.accessCenterScreen);
         scanScreen = findViewById(R.id.scanScreen);
         homeContent = findViewById(R.id.homeContent);
         homeHeroCard = findViewById(R.id.homeHeroCard);
@@ -263,12 +273,16 @@ public class MainActivity extends AppCompatActivity {
         chineseLanguageButton = findViewById(R.id.chineseLanguageButton);
         slovenianLanguageButton = findViewById(R.id.slovenianLanguageButton);
         startScanButton = findViewById(R.id.startScanButton);
+        reviewAccessButton = findViewById(R.id.reviewAccessButton);
         viewReportButton = findViewById(R.id.viewReportButton);
         reportPrimaryButton = findViewById(R.id.reportPrimaryButton);
         removeSelectedButton = findViewById(R.id.removeSelectedButton);
         removalBackButton = findViewById(R.id.removalBackButton);
+        clearHistoryButton = findViewById(R.id.clearHistoryButton);
+        accessCenterBackButton = findViewById(R.id.accessCenterBackButton);
         homeTitle = findViewById(R.id.homeTitle);
         scanTitle = findViewById(R.id.scanTitle);
+        accessCenterTitle = findViewById(R.id.accessCenterTitle);
         reportTitle = findViewById(R.id.reportTitle);
         removalTitle = findViewById(R.id.removalTitle);
         currentScanLabel = findViewById(R.id.currentScanLabel);
@@ -281,6 +295,7 @@ public class MainActivity extends AppCompatActivity {
         summaryBody = findViewById(R.id.summaryBody);
         historySection = findViewById(R.id.historySection);
         historyContainer = findViewById(R.id.historyContainer);
+        accessCenterContainer = findViewById(R.id.accessCenterContainer);
         summaryFindingsContainer = findViewById(R.id.summaryFindingsContainer);
         reportSectionsContainer = findViewById(R.id.reportSectionsContainer);
         removalThreatsContainer = findViewById(R.id.removalThreatsContainer);
@@ -323,6 +338,7 @@ public class MainActivity extends AppCompatActivity {
         chineseLanguageButton.setOnClickListener(v -> selectLanguage("zh"));
         slovenianLanguageButton.setOnClickListener(v -> selectLanguage("sl"));
         startScanButton.setOnClickListener(v -> requestAccessAndStart());
+        reviewAccessButton.setOnClickListener(v -> showAccessCenterScreen());
         viewReportButton.setOnClickListener(v -> showDetailedReport());
         reportPrimaryButton.setOnClickListener(v -> {
             if (!hasActionableThreats()) {
@@ -333,6 +349,8 @@ public class MainActivity extends AppCompatActivity {
         });
         removeSelectedButton.setOnClickListener(v -> startRemovalFlow());
         removalBackButton.setOnClickListener(v -> showDetailedReport());
+        clearHistoryButton.setOnClickListener(v -> confirmClearHistory());
+        accessCenterBackButton.setOnClickListener(v -> showHomeScreen());
         refreshLanguageSelectionState();
     }
 
@@ -345,6 +363,7 @@ public class MainActivity extends AppCompatActivity {
         removalSelectionSummary.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         ViewCompat.setAccessibilityHeading(homeTitle, true);
         ViewCompat.setAccessibilityHeading(scanTitle, true);
+        ViewCompat.setAccessibilityHeading(accessCenterTitle, true);
         ViewCompat.setAccessibilityHeading(summaryTitle, true);
         ViewCompat.setAccessibilityHeading(reportTitle, true);
         ViewCompat.setAccessibilityHeading(removalTitle, true);
@@ -2468,6 +2487,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showHomeScreen() {
         homeScreen.setVisibility(View.VISIBLE);
+        accessCenterScreen.setVisibility(View.GONE);
         scanScreen.setVisibility(View.GONE);
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.GONE);
@@ -2479,8 +2499,22 @@ public class MainActivity extends AppCompatActivity {
         focusAndAnnounce(homeTitle, getString(R.string.a11y_home_opened));
     }
 
+    private void showAccessCenterScreen() {
+        homeScreen.setVisibility(View.GONE);
+        accessCenterScreen.setVisibility(View.VISIBLE);
+        scanScreen.setVisibility(View.GONE);
+        summaryScreen.setVisibility(View.GONE);
+        reportScreen.setVisibility(View.GONE);
+        removalScreen.setVisibility(View.GONE);
+        languageDropdown.setVisibility(View.GONE);
+        renderAccessCenter();
+        accessCenterScreen.fullScroll(View.FOCUS_UP);
+        focusAndAnnounce(accessCenterTitle, getString(R.string.access_center_title));
+    }
+
     private void showScanScreen() {
         homeScreen.setVisibility(View.GONE);
+        accessCenterScreen.setVisibility(View.GONE);
         scanScreen.setVisibility(View.VISIBLE);
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.GONE);
@@ -2495,6 +2529,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSummaryScreen(boolean danger) {
         homeScreen.setVisibility(View.GONE);
+        accessCenterScreen.setVisibility(View.GONE);
         scanScreen.setVisibility(View.GONE);
         summaryScreen.setVisibility(View.VISIBLE);
         reportScreen.setVisibility(View.GONE);
@@ -2512,6 +2547,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showDetailedReport() {
         homeScreen.setVisibility(View.GONE);
+        accessCenterScreen.setVisibility(View.GONE);
         scanScreen.setVisibility(View.GONE);
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.VISIBLE);
@@ -2524,6 +2560,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showRemovalScreen() {
         homeScreen.setVisibility(View.GONE);
+        accessCenterScreen.setVisibility(View.GONE);
         scanScreen.setVisibility(View.GONE);
         summaryScreen.setVisibility(View.GONE);
         reportScreen.setVisibility(View.GONE);
@@ -2690,6 +2727,136 @@ public class MainActivity extends AppCompatActivity {
         for (ScanHistoryEntry entry : scanHistory) {
             historyContainer.addView(createHistoryCard(entry));
         }
+    }
+
+    private void renderAccessCenter() {
+        accessCenterContainer.removeAllViews();
+        accessCenterContainer.addView(createAccessStatusCard(
+                getString(R.string.access_usage_title),
+                hasUsageStatsAccess() ? getString(R.string.access_status_ready) : getString(R.string.access_status_needs_review),
+                hasUsageStatsAccess() ? getString(R.string.access_usage_ready_body) : getString(R.string.access_usage_missing_body),
+                hasUsageStatsAccess() ? null : () -> usageAccessLauncher.launch(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        ));
+        accessCenterContainer.addView(createAccessStatusCard(
+                getString(R.string.access_media_title),
+                hasAllRuntimePermissions(getRuntimePermissions()) ? getString(R.string.access_status_ready) : getString(R.string.access_status_needs_review),
+                hasAllRuntimePermissions(getRuntimePermissions())
+                        ? getString(R.string.access_media_ready_body)
+                        : getString(R.string.access_media_missing_body),
+                hasAllRuntimePermissions(getRuntimePermissions()) ? null : this::openAppDetailsSettings
+        ));
+        accessCenterContainer.addView(createAccessStatusCard(
+                getString(R.string.access_lock_title),
+                isDeviceSecure() ? getString(R.string.access_status_ready) : getString(R.string.access_status_needs_review),
+                isDeviceSecure() ? getString(R.string.access_lock_ready_body) : getString(R.string.access_lock_missing_body),
+                isDeviceSecure() ? null : () -> openSystemIntent(new Intent(Settings.ACTION_SECURITY_SETTINGS))
+        ));
+
+        boolean privateDnsEnabled = isPrivateDnsEnabled();
+        accessCenterContainer.addView(createAccessStatusCard(
+                getString(R.string.access_dns_title),
+                privateDnsEnabled ? getString(R.string.access_status_ready) : getString(R.string.access_status_needs_review),
+                privateDnsEnabled ? getString(R.string.access_dns_ready_body) : getString(R.string.access_dns_missing_body),
+                privateDnsEnabled ? null : () -> openSystemIntent(new Intent(Settings.ACTION_WIRELESS_SETTINGS))
+        ));
+    }
+
+    @NonNull
+    private View createAccessStatusCard(
+            @NonNull String titleText,
+            @NonNull String statusText,
+            @NonNull String bodyText,
+            @Nullable Runnable action
+    ) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(getPanelBackgroundRes());
+        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardParams.bottomMargin = dp(12);
+        card.setLayoutParams(cardParams);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        card.addView(header);
+
+        TextView title = new TextView(this);
+        title.setText(titleText);
+        title.setTextColor(getPrimaryTextColor());
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(titleParams);
+        header.addView(title);
+
+        TextView status = new TextView(this);
+        status.setText(statusText);
+        status.setTextColor(getPrimaryTextColor());
+        status.setBackgroundResource(getChipBackgroundRes());
+        status.setPadding(dp(12), dp(8), dp(12), dp(8));
+        header.addView(status);
+
+        TextView body = new TextView(this);
+        body.setText(bodyText);
+        body.setTextColor(getSecondaryTextColor());
+        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bodyParams.topMargin = dp(8);
+        body.setLayoutParams(bodyParams);
+        card.addView(body);
+
+        if (action != null) {
+            MaterialButton button = new MaterialButton(this, null,
+                    com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            button.setText(R.string.open_settings);
+            button.setTextColor(getPrimaryTextColor());
+            button.setStrokeColor(ContextCompat.getColorStateList(this, R.color.glass_stroke));
+            button.setMinHeight(dp(44));
+            button.setOnClickListener(v -> action.run());
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            buttonParams.topMargin = dp(10);
+            button.setLayoutParams(buttonParams);
+            card.addView(button);
+        }
+
+        return card;
+    }
+
+    private void confirmClearHistory() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.clear_history)
+                .setMessage(R.string.clear_history_message)
+                .setPositiveButton(R.string.clear_history, (dialog, which) -> {
+                    scanHistory = new ArrayList<>();
+                    getPreferences().edit().remove(KEY_SCAN_HISTORY).apply();
+                    renderHistorySection();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openAppDetailsSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        openSystemIntent(intent);
+    }
+
+    private void openSystemIntent(@NonNull Intent intent) {
+        if (canResolveIntent(intent)) {
+            startActivity(intent);
+        } else {
+            announceForAccessibility(getString(R.string.action_unavailable));
+        }
+    }
+
+    private boolean isPrivateDnsEnabled() {
+        String privateDnsMode = Settings.Global.getString(getContentResolver(), "private_dns_mode");
+        return !TextUtils.isEmpty(privateDnsMode) && !"off".equalsIgnoreCase(privateDnsMode);
     }
 
     private void updateHomeLayoutForHistory(boolean hasHistory) {
@@ -3038,12 +3205,14 @@ public class MainActivity extends AppCompatActivity {
         currentScanLabel.setBackgroundResource(getPanelBackgroundRes());
         scanningPanel.setBackgroundResource(getScanPanelBackgroundRes());
         startScanButton.setBackgroundResource(getButtonBackgroundRes());
+        reviewAccessButton.setBackgroundResource(getPanelBackgroundRes());
         viewReportButton.setBackgroundResource(getButtonBackgroundRes());
         reportPrimaryButton.setBackgroundResource(getButtonBackgroundRes());
         removeSelectedButton.setBackgroundResource(getButtonBackgroundRes());
 
         homeTitle.setTextColor(getPrimaryTextColor());
         scanTitle.setTextColor(getPrimaryTextColor());
+        accessCenterTitle.setTextColor(getPrimaryTextColor());
         reportTitle.setTextColor(getPrimaryTextColor());
         removalTitle.setTextColor(getPrimaryTextColor());
         currentScanLabel.setTextColor(getPrimaryTextColor());
@@ -3051,6 +3220,9 @@ public class MainActivity extends AppCompatActivity {
         scanFootnote.setTextColor(getSecondaryTextColor());
         summaryBody.setTextColor(ContextCompat.getColor(this, R.color.summary_text));
         removalSelectionSummary.setTextColor(getPrimaryTextColor());
+        reviewAccessButton.setTextColor(getPrimaryTextColor());
+        clearHistoryButton.setTextColor(getPrimaryTextColor());
+        accessCenterBackButton.setTextColor(getPrimaryTextColor());
     }
 
     private int getPrimaryTextColor() {

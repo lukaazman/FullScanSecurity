@@ -11,6 +11,26 @@
     <string name="history_title">Zgodovina</string>
     <string name="history_item_threats">%1$d groženj</string>
     <string name="history_item_content_description">Pregled z dne %1$s z %2$d grožnjami.</string>
+    <string name="review_access">Preveri dostop</string>
+    <string name="clear_history">Počisti zgodovino</string>
+    <string name="clear_history_message">Odstranim shranjeno zgodovino pregledov s te naprave?</string>
+    <string name="access_center_title">Center dostopa</string>
+    <string name="access_center_subtitle">Preveri ključna dovoljenja in nastavitve naprave za boljšo pokritost pregleda.</string>
+    <string name="back_home">Nazaj domov</string>
+    <string name="access_status_ready">Pripravljeno</string>
+    <string name="access_status_needs_review">Preglej</string>
+    <string name="access_usage_title">Dostop do uporabe</string>
+    <string name="access_usage_ready_body">Dostop do uporabe je vklopljen.</string>
+    <string name="access_usage_missing_body">Omogoči ga za širše preglede aktivnosti aplikacij.</string>
+    <string name="access_media_title">Dostop do medijev</string>
+    <string name="access_media_ready_body">Dostop do medijev je odobren.</string>
+    <string name="access_media_missing_body">Odpri nastavitve aplikacije, če želiš globlji pregled datotek.</string>
+    <string name="access_lock_title">Zaklep zaslona</string>
+    <string name="access_lock_ready_body">Nastavljen je varen zaklep zaslona.</string>
+    <string name="access_lock_missing_body">Dodaj varen zaklep za močnejšo varnost naprave.</string>
+    <string name="access_dns_title">Zasebni DNS</string>
+    <string name="access_dns_ready_body">Zasebni DNS je aktiven.</string>
+    <string name="access_dns_missing_body">Vklopi zasebni DNS za boljšo omrežno higieno.</string>
 
     <string name="start_scan">Začni polni pregled</string>
     <string name="scan_progress_label">Polni pregled poteka</string>

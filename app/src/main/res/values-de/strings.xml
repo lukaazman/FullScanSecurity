@@ -11,6 +11,26 @@
     <string name="history_title">Verlauf</string>
     <string name="history_item_threats">%1$d Bedrohungen</string>
     <string name="history_item_content_description">Scan von %1$s mit %2$d Bedrohungen.</string>
+    <string name="review_access">Zugriff prüfen</string>
+    <string name="clear_history">Verlauf löschen</string>
+    <string name="clear_history_message">Gespeicherte Scan-Historie von diesem Gerät entfernen?</string>
+    <string name="access_center_title">Zugriffscenter</string>
+    <string name="access_center_subtitle">Prüfe wichtige Berechtigungen und Geräteeinstellungen für bessere Scan-Abdeckung.</string>
+    <string name="back_home">Zurück zum Start</string>
+    <string name="access_status_ready">Bereit</string>
+    <string name="access_status_needs_review">Prüfen</string>
+    <string name="access_usage_title">Nutzungszugriff</string>
+    <string name="access_usage_ready_body">Nutzungszugriff ist aktiv.</string>
+    <string name="access_usage_missing_body">Aktiviere ihn für breitere Aktivitätsprüfungen.</string>
+    <string name="access_media_title">Medienzugriff</string>
+    <string name="access_media_ready_body">Medienzugriff ist erteilt.</string>
+    <string name="access_media_missing_body">Öffne die App-Einstellungen, wenn du tiefere Dateiscans willst.</string>
+    <string name="access_lock_title">Bildschirmsperre</string>
+    <string name="access_lock_ready_body">Eine sichere Sperre ist gesetzt.</string>
+    <string name="access_lock_missing_body">Füge eine sichere Sperre für bessere Gerätesicherheit hinzu.</string>
+    <string name="access_dns_title">Privates DNS</string>
+    <string name="access_dns_ready_body">Privates DNS ist aktiv.</string>
+    <string name="access_dns_missing_body">Aktiviere privates DNS für bessere Netzwerksicherheit.</string>
 
     <string name="start_scan">Vollscan starten</string>
     <string name="scan_progress_label">Vollscan läuft</string>

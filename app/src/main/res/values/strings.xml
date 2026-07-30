@@ -11,6 +11,26 @@
     <string name="history_title">History</string>
     <string name="history_item_threats">%1$d threats</string>
     <string name="history_item_content_description">Scan from %1$s with %2$d threats.</string>
+    <string name="review_access">Review Access</string>
+    <string name="clear_history">Clear History</string>
+    <string name="clear_history_message">Remove saved scan history from this device?</string>
+    <string name="access_center_title">Access Center</string>
+    <string name="access_center_subtitle">Check the key permissions and device settings that improve scan coverage.</string>
+    <string name="back_home">Back Home</string>
+    <string name="access_status_ready">Ready</string>
+    <string name="access_status_needs_review">Needs review</string>
+    <string name="access_usage_title">Usage access</string>
+    <string name="access_usage_ready_body">Usage access is on.</string>
+    <string name="access_usage_missing_body">Turn this on for broader app-activity checks.</string>
+    <string name="access_media_title">Media access</string>
+    <string name="access_media_ready_body">Media access is granted.</string>
+    <string name="access_media_missing_body">Open app settings if you want deeper file scanning.</string>
+    <string name="access_lock_title">Screen lock</string>
+    <string name="access_lock_ready_body">A secure lock screen is set.</string>
+    <string name="access_lock_missing_body">Add a secure lock screen for stronger device posture.</string>
+    <string name="access_dns_title">Private DNS</string>
+    <string name="access_dns_ready_body">Private DNS is active.</string>
+    <string name="access_dns_missing_body">Turn on Private DNS for stronger network hygiene.</string>
 
     <string name="start_scan">Start Full Scan</string>
     <string name="scan_progress_label">Full scan in progress</string>

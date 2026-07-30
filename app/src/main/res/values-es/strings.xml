@@ -11,6 +11,26 @@
     <string name="history_title">Historial</string>
     <string name="history_item_threats">%1$d amenazas</string>
     <string name="history_item_content_description">Escaneo de %1$s con %2$d amenazas.</string>
+    <string name="review_access">Revisar acceso</string>
+    <string name="clear_history">Borrar historial</string>
+    <string name="clear_history_message">¿Eliminar el historial de escaneos guardado en este dispositivo?</string>
+    <string name="access_center_title">Centro de acceso</string>
+    <string name="access_center_subtitle">Revisa permisos y ajustes clave que mejoran la cobertura del escaneo.</string>
+    <string name="back_home">Volver al inicio</string>
+    <string name="access_status_ready">Listo</string>
+    <string name="access_status_needs_review">Revisar</string>
+    <string name="access_usage_title">Acceso de uso</string>
+    <string name="access_usage_ready_body">El acceso de uso está activado.</string>
+    <string name="access_usage_missing_body">Actívalo para comprobaciones más amplias de actividad.</string>
+    <string name="access_media_title">Acceso a medios</string>
+    <string name="access_media_ready_body">El acceso a medios está concedido.</string>
+    <string name="access_media_missing_body">Abre los ajustes de la app si quieres un escaneo de archivos más profundo.</string>
+    <string name="access_lock_title">Bloqueo de pantalla</string>
+    <string name="access_lock_ready_body">Hay un bloqueo seguro configurado.</string>
+    <string name="access_lock_missing_body">Añade un bloqueo seguro para una mejor postura del dispositivo.</string>
+    <string name="access_dns_title">DNS privado</string>
+    <string name="access_dns_ready_body">DNS privado está activo.</string>
+    <string name="access_dns_missing_body">Activa DNS privado para una higiene de red más fuerte.</string>
 
     <string name="start_scan">Iniciar escaneo completo</string>
     <string name="scan_progress_label">Escaneo completo en curso</string>
