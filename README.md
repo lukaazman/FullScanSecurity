@@ -4,9 +4,9 @@ FullScanSecurity is a free Android security scanner that reviews app access, dev
 
 ## Download Android App
 
-[![Download Android App](https://img.shields.io/badge/Download-Android%20App-3DDC84?logo=android&logoColor=white)](https://github.com/lukaazman/FullScanSecurity/releases/latest/download/FullScanSecurity.apk)
+[![Download v1.1.0](https://img.shields.io/badge/Download-v1.1.0-30F480?logo=android&logoColor=white)](https://github.com/lukaazman/FullScanSecurity/releases/download/v1.1.0/FullScanSecurity.apk)
 
-Download the latest APK using the button above.
+Latest release: v1.1.0. Older versions are under Releases.
 
 ## Install
 

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/removalScreen"
+    style="@style/FullScan.Screen">
+
+    <LinearLayout style="@style/FullScan.Column">
+
+        <include layout="@layout/view_header" />
+
+        <TextView
+            android:id="@+id/removalTitle"
+            style="@style/FullScan.ScreenTitle"
+            android:text="@string/removal_page_title" />
+
+        <TextView
+            style="@style/FullScan.ScreenSubtitle"
+            android:text="@string/removal_page_subtitle" />
+
+        <LinearLayout
+            android:id="@+id/removalThreatsContainer"
+            style="@style/FullScan.List"
+            android:background="@drawable/bg_surface" />
+
+        <TextView
+            android:id="@+id/removalSelectionSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:accessibilityLiveRegion="polite"
+            android:textAppearance="@style/TextAppearance.FullScan.Caption" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/removeSelectedButton"
+            style="@style/FullScan.WideButton"
+            android:layout_marginTop="16dp"
+            android:text="@string/apply_selected_actions" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/removalBackButton"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/back_to_report" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

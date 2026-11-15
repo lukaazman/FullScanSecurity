@@ -1,28 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Suite tokens, shared with TabTensor. Only accent, accent_deep and positive differ per app. -->
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="liquid_top">#FBFCFF</color>
-    <color name="liquid_mid">#F2F6FC</color>
-    <color name="liquid_bottom">#E7EEF7</color>
-    <color name="liquid_blue">#8EB6F2</color>
-    <color name="liquid_pink">#EEE8F8</color>
-    <color name="ink_primary">#16243A</color>
-    <color name="ink_secondary">#6E7C90</color>
-    <color name="accessible_ink_primary">#0B1524</color>
-    <color name="accessible_ink_secondary">#223247</color>
-    <color name="summary_text">#F9FCFF</color>
-    <color name="button_text">#2A4D7F</color>
-    <color name="glass_fill">#66FFFFFF</color>
-    <color name="glass_fill_strong">#F8FFFFFF</color>
-    <color name="glass_fill_soft">#5CFFFFFF</color>
-    <color name="accessible_glass_fill">#F7FFFFFF</color>
-    <color name="accessible_glass_fill_soft">#F3FFFFFF</color>
-    <color name="glass_stroke">#8AFFFFFF</color>
-    <color name="accessible_glass_stroke">#C5D6EB</color>
-    <color name="glass_track">#2EFFFFFF</color>
-    <color name="status_safe">#CDEEDC</color>
-    <color name="status_danger">#F5D7DD</color>
-    <color name="accessible_status_safe">#BFE9D1</color>
-    <color name="accessible_status_danger">#F2C6CF</color>
+    <color name="ground">#0E0F13</color>
+    <color name="surface">#16171C</color>
+    <color name="raised">#1E2026</color>
+    <color name="active">#262830</color>
+    <color name="rule">#23252C</color>
+    <color name="control">#3A3D47</color>
+    <color name="ink">#F4F5F7</color>
+    <color name="muted">#B4B7BF</color>
+    <color name="faint">#8E929B</color>
+    <color name="accent">#30F480</color>
+    <color name="accent_deep">#04C964</color>
+    <color name="accent_tint">#12291C</color>
+    <color name="on_accent">#0E0F13</color>
+    <color name="negative">#F2555A</color>
+    <color name="negative_tint">#2A1517</color>
 </resources>

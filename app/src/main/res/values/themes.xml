@@ -1,12 +1,45 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Base.Theme.FullScanSecurity" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/liquid_blue</item>
-        <item name="colorOnPrimary">@color/ink_primary</item>
-        <item name="colorSecondary">@color/liquid_pink</item>
+<resources>
+    <style name="Base.Theme.FullScanSecurity" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorPrimaryContainer">@color/accent_tint</item>
+        <item name="colorOnPrimaryContainer">@color/accent</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorError">@color/negative</item>
+        <item name="android:colorBackground">@color/ground</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/raised</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorOnSurfaceVariant">@color/muted</item>
+        <item name="colorOutline">@color/control</item>
+        <item name="colorOutlineVariant">@color/rule</item>
+        <item name="android:windowBackground">@color/ground</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:fontFamily">@font/instrument_sans_regular</item>
+        <item name="fontFamily">@font/instrument_sans_regular</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.FullScan.Title</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.FullScan.Section</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.FullScan.Body</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.FullScan.Caption</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.FullScan.Label</item>
+        <item name="materialButtonStyle">@style/Widget.FullScan.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.FullScan.Button.Secondary</item>
+        <item name="checkboxStyle">@style/Widget.FullScan.CheckBox</item>
+        <item name="fsMuted">@color/muted</item>
+        <item name="fsFaint">@color/faint</item>
+        <item name="fsEdge">@android:color/transparent</item>
     </style>
 
     <style name="Theme.FullScanSecurity" parent="Base.Theme.FullScanSecurity" />
+
+    <!-- High-contrast text or a large font scale: secondary text becomes ink, surfaces get a visible edge. -->
+    <style name="Theme.FullScanSecurity.HighContrast">
+        <item name="colorOnSurfaceVariant">@color/ink</item>
+        <item name="fsMuted">@color/ink</item>
+        <item name="fsFaint">@color/ink</item>
+        <item name="fsEdge">@color/faint</item>
+        <item name="colorOutline">@color/ink</item>
+    </style>
 </resources>

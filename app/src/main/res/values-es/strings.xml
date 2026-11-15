@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Full Scan Security</string>
-    <string name="home_title">Full Scan Security</string>
-    <string name="home_description">Escaneo gratis. Sin anuncios. Sin inicio de sesión.</string>
+    <string name="home_title">¿Es seguro este teléfono?</string>
+    <string name="home_description">15 comprobaciones de spyware, accesos de riesgo y ajustes débiles. Nada sale del dispositivo.</string>
     <string name="language_toggle">Cambiar idioma</string>
     <string name="language_english">Inglés</string>
     <string name="language_spanish">Español</string>
@@ -32,7 +32,7 @@
     <string name="access_dns_ready_body">DNS privado está activo.</string>
     <string name="access_dns_missing_body">Activa DNS privado para una higiene de red más fuerte.</string>
 
-    <string name="start_scan">Iniciar escaneo completo</string>
+    <string name="start_scan">Escanear teléfono</string>
     <string name="scan_progress_label">Escaneo completo en curso</string>
     <string name="scan_description">Comprobando apps, accesos, archivos y estado del dispositivo.</string>
     <string name="permission_title">Más acceso ayuda</string>
@@ -48,7 +48,6 @@
     <string name="summary_safe_body">No apareció nada riesgoso en esta pasada.</string>
     <string name="summary_danger_title">Amenazas detectadas</string>
     <string name="summary_danger_body">Revisa los elementos marcados y elimina lo que no sea de confianza.</string>
-    <string name="summary_clean_chip">5 áreas revisadas. Sin coincidencias.</string>
     <string name="summary_clean_chip_dynamic">%1$d áreas revisadas. Sin coincidencias.</string>
 
     <string name="view_report">Abrir informe</string>
@@ -64,7 +63,6 @@
 
     <string name="removal_page_title">Eliminación guiada</string>
     <string name="removal_page_subtitle">Elige qué corregir.</string>
-    <string name="remove_selected">Eliminar amenazas seleccionadas</string>
     <string name="apply_selected_actions">Aplicar acciones seleccionadas</string>
     <string name="back_to_report">Volver al informe</string>
     <string name="action_open_app_settings">Abrir ajustes de la app</string>
@@ -329,4 +327,5 @@
     <string name="a11y_removal_item">%1$s. %2$s. Seleccionado: %3$s.</string>
     <string name="a11y_selected_yes">sí</string>
     <string name="a11y_selected_no">no</string>
+    <string name="header_note">En el dispositivo</string>
 </resources>

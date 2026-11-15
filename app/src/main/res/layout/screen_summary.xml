@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/summaryScreen"
+    style="@style/FullScan.Screen">
+
+    <LinearLayout style="@style/FullScan.Column">
+
+        <include layout="@layout/view_header" />
+
+        <TextView
+            android:id="@+id/summaryCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:fontFeatureSettings="tnum"
+            android:importantForAccessibility="no"
+            android:includeFontPadding="false"
+            android:textAppearance="@style/TextAppearance.FullScan.Display"
+            android:textSize="72sp" />
+
+        <TextView
+            android:id="@+id/summaryTitle"
+            style="@style/FullScan.ScreenTitle"
+            android:layout_marginTop="8dp"
+            android:accessibilityLiveRegion="polite" />
+
+        <TextView
+            android:id="@+id/summaryBody"
+            style="@style/FullScan.ScreenSubtitle" />
+
+        <LinearLayout
+            android:id="@+id/summaryFindingsContainer"
+            style="@style/FullScan.List"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_surface" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/viewReportButton"
+            style="@style/FullScan.WideButton"
+            android:text="@string/view_report" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

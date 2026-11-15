@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/accessCenterScreen"
+    style="@style/FullScan.Screen">
+
+    <LinearLayout style="@style/FullScan.Column">
+
+        <include layout="@layout/view_header" />
+
+        <TextView
+            android:id="@+id/accessCenterTitle"
+            style="@style/FullScan.ScreenTitle"
+            android:text="@string/access_center_title" />
+
+        <TextView
+            style="@style/FullScan.ScreenSubtitle"
+            android:text="@string/access_center_subtitle" />
+
+        <LinearLayout
+            android:id="@+id/accessCenterContainer"
+            style="@style/FullScan.List" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/accessCenterBackButton"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/back_home" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

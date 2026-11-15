@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/scanScreen"
+    style="@style/FullScan.Screen">
+
+    <LinearLayout style="@style/FullScan.Column">
+
+        <include layout="@layout/view_header" />
+
+        <TextView
+            android:id="@+id/scanTitle"
+            style="@style/FullScan.ScreenTitle"
+            android:text="@string/scan_progress_label" />
+
+        <TextView
+            style="@style/FullScan.ScreenSubtitle"
+            android:text="@string/scan_description" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="56dp">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/circularProgress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:importantForAccessibility="no"
+                app:indicatorColor="@color/accent"
+                app:indicatorSize="184dp"
+                app:trackColor="@color/raised"
+                app:trackCornerRadius="4dp"
+                app:trackThickness="8dp" />
+
+            <TextView
+                android:id="@+id/scanCounter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:accessibilityLiveRegion="polite"
+                android:fontFeatureSettings="tnum"
+                android:textAppearance="@style/TextAppearance.FullScan.Display" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/currentScanLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:accessibilityLiveRegion="polite"
+            android:gravity="center_horizontal"
+            android:textAppearance="@style/TextAppearance.FullScan.Body" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_horizontal"
+            android:text="@string/scan_footer"
+            android:textAppearance="@style/TextAppearance.FullScan.Meta" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

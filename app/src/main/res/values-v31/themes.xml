@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.FullScanSecurity" parent="Base.Theme.FullScanSecurity">
+        <item name="android:windowSplashScreenBackground">@color/ground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

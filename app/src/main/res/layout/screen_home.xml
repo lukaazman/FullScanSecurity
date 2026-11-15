@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/homeScreen"
+    style="@style/FullScan.Screen">
+
+    <LinearLayout style="@style/FullScan.Column">
+
+        <include layout="@layout/view_header" />
+
+        <TextView
+            android:id="@+id/homeTitle"
+            style="@style/FullScan.ScreenTitle"
+            android:layout_marginTop="40dp"
+            android:text="@string/home_title"
+            android:textAppearance="@style/TextAppearance.FullScan.Display" />
+
+        <TextView
+            style="@style/FullScan.ScreenSubtitle"
+            android:layout_marginTop="10dp"
+            android:text="@string/home_description"
+            android:textAppearance="@style/TextAppearance.FullScan.Body"
+            android:textColor="?attr/fsMuted" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/startScanButton"
+            style="@style/FullScan.WideButton"
+            android:layout_marginTop="32dp"
+            android:text="@string/start_scan" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reviewAccessButton"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/review_access" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/languageToggleButton"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="12dp"
+                android:contentDescription="@string/language_toggle"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                app:icon="@drawable/ic_language"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconTint="@color/ink" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/languageDropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_surface"
+            android:orientation="vertical"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/historySection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:accessibilityHeading="true"
+                    android:text="@string/history_title"
+                    android:textAppearance="@style/TextAppearance.FullScan.Section" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clearHistoryButton"
+                    style="@style/Widget.FullScan.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clear_history" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/historyContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_surface"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/reportScreen"
+    style="@style/FullScan.Screen">
+
+    <LinearLayout style="@style/FullScan.Column">
+
+        <include layout="@layout/view_header" />
+
+        <TextView
+            android:id="@+id/reportTitle"
+            style="@style/FullScan.ScreenTitle"
+            android:text="@string/report_title" />
+
+        <TextView
+            style="@style/FullScan.ScreenSubtitle"
+            android:text="@string/report_subtitle" />
+
+        <LinearLayout
+            android:id="@+id/reportSectionsContainer"
+            style="@style/FullScan.List" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/reportPrimaryButton"
+            style="@style/FullScan.WideButton"
+            android:layout_marginTop="12dp" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

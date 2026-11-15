@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Text and edge colours that the high-contrast overlay strengthens. -->
+    <attr name="fsMuted" format="color" />
+    <attr name="fsFaint" format="color" />
+    <attr name="fsEdge" format="color" />
+</resources>
